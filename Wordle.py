@@ -1,16 +1,14 @@
-#import pygame
+import pygame
 import random
 from typing import List
 
-def startup() -> List[str]:
+def mode_choice(mode : int) -> List[str]:
     with open('word lists/fiveletterwords.txt', 'r') as file:
         five_letter_words = file.read().splitlines()
     with open('word lists/sixletterwords.txt', 'r') as file:
         six_letter_words = file.read().splitlines()
     with open('word lists/sevenletterwords.txt', 'r') as file:
         seven_letter_words = file.read().splitlines()
-
-    mode = 5 # int(input())
 
     chosen_list = []
     match mode:
@@ -25,77 +23,101 @@ def startup() -> List[str]:
     
     return chosen_list
 
-def guessing(chosen_list: List[str]):
-    mode = len(chosen_list[0])
-    #number_of_guesses = manual choice (input) - (2,mode+1)
-    random_word = "ABOTB" # chosen_list[random.randint(0, len(chosen_list)-1)]
+def number_of_guesses() -> int:
+    return 5
+
+def is_word_valid(word: str, chosen_list : List[str]) -> bool:
+    if word.upper() in chosen_list:
+        return True
+    else:
+        return False
+
+def random_word(chosen_list: List[str]) -> List[str]:
+    random_word = chosen_list[random.randint(0, len(chosen_list)-1)]
     letters = list(random_word)
-    count = 0
+    return letters
 
-    def is_word_valid(word: str) -> bool:
-        if word:
-            return True
-        else:
-            return False
+def guessing(guess_letters: List[str], word : str, chosen_list: List[str]) -> None:
+    guess = ''.join(guess_letters).upper()
+    guess_letters = list(guess)
+    letters = list(word.upper())
 
+    if not is_word_valid(guess, chosen_list):
+        # reset word typing and make a popup that no such word exists
+        raise ValueError
 
-    while count!=mode+1:
+    #logic
+    if guess == random_word:
+        print('You won!')
+        return
+    else:
+        #make a list for alphabet - color corrects in green, guesses in yellow, wrongs in black
+        to_be_guessed = list(letters)
 
-        guess = (input()).upper()
-        guess_letters = list(guess)
-        if not is_word_valid(guess):
-            print("not a word my guy")
-            continue
-
-        #logic
-        if guess == random_word:
-            print("You won!")
-            return
-        else:
-            #make a list for alphabet - color corrects in green, guesses in yellow, wrongs in black
-            to_be_guessed = list(letters)
-
-            for index, letter in enumerate(letters):
-                if letter == guess_letters[index]:
-                    to_be_guessed.remove(guess_letters[index])
-                    print("g", end="")
+        for index, letter in enumerate(letters):
+            if letter == guess_letters[index]:
+                to_be_guessed.remove(guess_letters[index])
+                print('g', end='')
                     
-                elif guess_letters[index] in to_be_guessed:
-                    to_be_guessed.remove(guess_letters[index])
-                    print("y", end="")
+            elif guess_letters[index] in to_be_guessed:
+                to_be_guessed.remove(guess_letters[index])
+                print('y', end='')
                     
-                else:
-                    print("b", end="")
-            print("\n")
-        count+=1
-        pass
+            else:
+                print('b', end='')
+        print("\n")
 
-    print(f"damn, you lost! the word was {random_word}")
+pygame.init()
 
-chosen_list = startup()
+pygame.font.init() 
+my_font = pygame.font.SysFont('Arial', 30)
 
-guessing(chosen_list)
-# pygame.init()
+screen = pygame.display.set_mode((640,640))
+clock = pygame.time.Clock()
+delta_time = 0.1
 
-# screen = pygame.display.set_mode((640,640))
-# clock = pygame.time.Clock()
-# delta_time = 0.1
+#this needs to be changed during runtime
+amount_of_guesses = number_of_guesses()
+chosen_list = mode_choice(5)
+chosen_word = random_word(chosen_list)
 
-# running = True
-# while running:
-#     #white background
-#     screen.fill((255,255,255))
+#change list length depending on number of guesses
+guess_list = [[],[],[],[],[],[]]
+word_number = 0
 
-#     #closing the window
-#     for event in pygame.event.get():
-#         if event.type == pygame.QUIT:
-#             running = False
+running = True
 
-#     #display stuff on the window
-#     pygame.display.flip()
+pygame.display.set_caption('PVP Wordle')
+while running:
+    #closing the window
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        if event.type == pygame.KEYDOWN:
+            #this is horrible, redo
+            if event.key == pygame.K_BACKSPACE:
+                guess_list[word_number] = guess_list[word_number][:-1]
+            elif word_number <= amount_of_guesses and event.key == pygame.K_RETURN and len(guess_list[word_number]) == 5:
+                try:
+                    guessing(guess_list[word_number],''.join(chosen_word),chosen_list)
+                    word_number+=1
+                except ValueError:
+                    guess_list[word_number] = []
+            elif word_number <= amount_of_guesses and event.key != pygame.K_RETURN and len(guess_list[word_number])<5:
+                guess_list[word_number].append(event.unicode)
 
-#     #time handling for framerate
-#     delta_time = clock.tick(60) / 1000
-#     delta_time = max(0.001, min(0.1,delta_time))
+    #white background
+    screen.fill((255,255,255))
 
-# pygame.quit()
+    text_surface = my_font.render("\n".join(" ".join(str(letter) for letter in word) for word in guess_list), False, (0, 0, 0))
+
+    screen.blit(text_surface, (250,100))
+
+    #display stuff on the window
+    pygame.display.flip()
+
+    #time handling for framerate
+    delta_time = clock.tick(60) / 1000
+    delta_time = max(0.001, min(0.1,delta_time))
+
+pygame.quit()
