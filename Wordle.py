@@ -37,7 +37,7 @@ def random_word(chosen_list: List[str]) -> List[str]:
     letters = list(random_word)
     return letters
 
-def guessing(guess_letters: List[str], word : str, chosen_list: List[str]) -> None:
+def guessing(guess_letters: List[str], word : str, chosen_list: List[str]) -> bool:
     guess = ''.join(guess_letters).upper()
     guess_letters = list(guess)
     letters = list(word.upper())
@@ -49,7 +49,7 @@ def guessing(guess_letters: List[str], word : str, chosen_list: List[str]) -> No
     #logic
     if guess == random_word:
         print('You won!')
-        return
+        return True
     else:
         #make a list for alphabet - color corrects in green, guesses in yellow, wrongs in black
         to_be_guessed = list(letters)
@@ -66,6 +66,7 @@ def guessing(guess_letters: List[str], word : str, chosen_list: List[str]) -> No
             else:
                 print('b', end='')
         print("\n")
+    return False
 
 pygame.init()
 
@@ -85,6 +86,10 @@ chosen_word = random_word(chosen_list)
 guess_list = [[],[],[],[],[],[]]
 word_number = 0
 
+valid_letter_inputs = [getattr(pygame, f"K_{chr(i)}") for i in range(ord('a'), ord('z') + 1)]
+
+round_active = True
+
 running = True
 
 pygame.display.set_caption('PVP Wordle')
@@ -93,18 +98,26 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        if event.type == pygame.KEYDOWN:
-            #this is horrible, redo
-            if event.key == pygame.K_BACKSPACE:
-                guess_list[word_number] = guess_list[word_number][:-1]
-            elif word_number <= amount_of_guesses and event.key == pygame.K_RETURN and len(guess_list[word_number]) == 5:
-                try:
-                    guessing(guess_list[word_number],''.join(chosen_word),chosen_list)
-                    word_number+=1
-                except ValueError:
-                    guess_list[word_number] = []
-            elif word_number <= amount_of_guesses and event.key != pygame.K_RETURN and len(guess_list[word_number])<5:
-                guess_list[word_number].append(event.unicode)
+        if round_active:
+            if event.type == pygame.KEYDOWN:
+                #this is horrible, redo
+                if event.key == pygame.K_BACKSPACE:
+                    #delete character
+                    guess_list[word_number] = guess_list[word_number][:-1]
+                elif event.key == pygame.K_RETURN and len(guess_list[word_number]) == 5:
+                    try:
+                        if guessing(guess_list[word_number],''.join(chosen_word),chosen_list):
+                            round_active = False
+                            print("You Won!")
+                        word_number+=1
+                        if word_number > amount_of_guesses:
+                            round_active = False
+                            print("You Lost!")
+                    except ValueError:
+                        #resets word upon invalid word, however it should display a pop up later
+                        guess_list[word_number] = []
+                elif event.key in valid_letter_inputs and len(guess_list[word_number])<5:
+                    guess_list[word_number].append(event.unicode)
 
     #white background
     screen.fill((255,255,255))
