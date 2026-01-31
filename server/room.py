@@ -4,9 +4,10 @@ class Room:
         self.indexes = {client1:0,client2: 0}
         self.finished = False
 
+    #change
     def generate_questions(self):
         return ["a","b","c"], [1,2,3]
-    
+    #change
     def verify_answer(self,client,attempt):
         if self.finished:
             return False

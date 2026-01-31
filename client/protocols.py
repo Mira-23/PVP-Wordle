@@ -6,7 +6,7 @@ class Protocols:
         OPPONENT = "protocol.opponent"
         OPPONENT_ADVANCE = 'protocol.opponent_advance'
         ANSWER_VALID = "protocol.answer_valid"
-        ANSWER_INVALID = 'protocol.answer_invalid'
+        ANSWER_INVALID = 'protocol.answer_invalid' # should be removed
         WINNER = "protocol.winner"
         OPPONENT_LEFT = "protocol.opponent_left"
 

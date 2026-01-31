@@ -30,6 +30,7 @@ class Server:
             else:
                 continue
 
+            #change    
             if not self.waiting_for_pair:
                 self.waiting_for_pair = client
                 print("waiting for a room")
@@ -42,15 +43,18 @@ class Server:
         print("Creating room.")
         room = Room(client,self.waiting_for_pair)
         self.opponent[client] = self.waiting_for_pair
+        #change
         self.opponent[self.waiting_for_pair] = client
 
         self.send(Protocols.Response.OPPONENT, self.client_names[client], self.waiting_for_pair)
         self.send(Protocols.Response.OPPONENT, self.client_names[self.waiting_for_pair], client)
 
         self.rooms[client] = room
+        #change
         self.rooms[self.waiting_for_pair] = room
         self.waiting_for_pair = None
 
+    #change
     def wait_for_room(self,client):
         while True:
             room = self.rooms.get(client)
