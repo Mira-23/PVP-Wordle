@@ -1,5 +1,4 @@
 import pygame
-import random
 from enum import Enum
 from typing import List
 from typing import Optional
@@ -41,8 +40,8 @@ class Wordle:
         self.text = ""
         self.board = [[Cell() for _ in range(self.mode)] for _ in range(self.amount_of_guesses)]
 
-        self.chosen_list, self.longer_list = self.mode_choice()
-        self.chosen_word = self.choose_random_word(self.chosen_list)
+        #self.chosen_list, self.longer_list = self.mode_choice()
+        #self.chosen_word = self.choose_random_word(self.chosen_list)
 
         self.guess_list = [[] for _ in range(self.amount_of_guesses)]
         self.word_number = 0
@@ -50,47 +49,6 @@ class Wordle:
 
         self.valid_letter_inputs = [getattr(pygame, f"K_{chr(i)}") for i in range(ord('a'), ord('z') + 1)]
 
-    def mode_choice(self) -> tuple[List[str],List[str]]:
-        with open('client/word lists/fiveletterwords.txt', 'r') as file:
-            five_letter_words = file.read().splitlines()
-        with open('client/word lists/longerfiveletterwords.txt', 'r') as file:
-            longer_fives = file.read().splitlines()
-        with open('client/word lists/sixletterwords.txt', 'r') as file:
-            six_letter_words = file.read().splitlines()
-        with open('client/word lists/longersixletterwords.txt', 'r') as file:
-            longer_sixes = file.read().splitlines()
-        with open('client/word lists/sevenletterwords.txt', 'r') as file:
-            seven_letter_words = file.read().splitlines()
-        with open('client/word lists/longersevenletterwords.txt', 'r') as file:
-            longer_sevens = file.read().splitlines()
-
-        chosen_list = []
-        longer_list = []
-        match self.mode:
-            case 5:
-                chosen_list = five_letter_words
-                longer_list = longer_fives
-            case 6:
-                chosen_list = six_letter_words
-                longer_list = longer_sixes
-            case 7:
-                chosen_list = seven_letter_words
-                longer_list = longer_sevens
-            case _:
-                pass
-            
-        return chosen_list, longer_list
-
-    def is_word_valid(self,word: str, chosen_list : List[str]) -> bool:
-        if word.upper() in chosen_list:
-            return True
-        else:
-            return False
-
-    def choose_random_word(self, chosen_list: List[str]) -> List[str]:
-        random_word = chosen_list[random.randint(0, len(chosen_list)-1)]
-        letters = list(random_word)
-        return letters
 
     def draw_waiting(self, screen):
         self.font = pygame.font.SysFont('Arial', 30)
@@ -132,8 +90,8 @@ class Wordle:
 
         if not self.logged_in and not self.client.started:
             self.draw_login(screen)
-        #elif not self.client.started:
-            #self.draw_waiting(screen)
+        elif not self.client.started:
+            self.draw_waiting(screen)
         else:
             self.draw_game(screen)
 
@@ -176,37 +134,37 @@ class Wordle:
         return False
 
     def handle_event(self, event):
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if self.input_box.collidepoint(event.pos):
-                self.color = self.color_active
-            else:
-                self.color = self.color_inactive
+        # if event.type == pygame.MOUSEBUTTONDOWN:
+        #     if self.input_box.collidepoint(event.pos):
+        #         self.color = self.color_active
+        #     else:
+        #         self.color = self.color_inactive
+        #     return
 
-        if event.type != pygame.KEYDOWN or self.color == self.color_inactive:
-            return
-
-        if event.key == pygame.K_RETURN and not self.round_active:
-            if not self.logged_in:
-                self.client.send(Protocols.Request.NICKNAME, self.text)
-                self.client.nickname = self.text
-                self.logged_in = True
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN and not self.round_active:
+                if not self.logged_in:
+                    self.client.send(Protocols.Request.NICKNAME, self.text)
+                    self.client.nickname = self.text
+                    self.logged_in = True
+                    self.text = ""
+                    self.round_active = True
+                    # elif self.client.started:
+                    #     #change text to actual asnwer
+                    #     self.client.send(Protocols.Request.ANSWER, self.text)
+                    #     self.text = ""
+                    #     self.round_active = True
+            elif event.key == pygame.K_BACKSPACE and not self.round_active:
+                self.text = self.text[:-1]
+            elif self.round_active:
                 self.text = ""
-                self.round_active = True
-            # elif self.client.started:
-            #     #change text to actual asnwer
-            #     self.client.send(Protocols.Request.ANSWER, self.text)
-            #     self.text = ""
-            #     self.round_active = True
-        elif event.key == pygame.K_BACKSPACE and not self.round_active:
-            self.text = self.text[:-1]
-        elif self.round_active:
-            self.text = ""
-            self.handle_wordle_event(event)
-        else:
-            self.text += event.unicode
+                self.handle_wordle_event(event)
+            else:
+                self.text += event.unicode
 
     def handle_wordle_event(self,event):
         self.font = pygame.font.SysFont('Arial', 30)
+        chosen_word = self.client.guesses[self.client.current_round_index]
 
         if self.round_active:
             if event.type == pygame.KEYDOWN:
@@ -221,27 +179,47 @@ class Wordle:
                     self.board[self.word_number][self.letter_number].letter = self.font.render(''.upper(),False,(250,250,250))
 
                 elif event.key == pygame.K_RETURN and len(self.guess_list[self.word_number]) == self.mode:
-                    if not self.is_word_valid(''.join(self.guess_list[self.word_number]),self.longer_list):
+                    if not self.client.is_word_valid(''.join(self.guess_list[self.word_number])):
                         print("Invalid word")
                         return
 
-                    if self.guessing(self.word_number,self.guess_list[self.word_number],''.join(self.chosen_word)):
-                        self.client.close()
-                        print("You Won!")
+                    if self.guessing(self.word_number,self.guess_list[self.word_number],''.join(chosen_word)):
+                        #self.client.close()
+                        print("You guessed it right!")
+                        self.client.current_round_index+=1
                                 
                     else:
                         self.word_number+=1
 
                         if self.word_number == self.amount_of_guesses:
                             self.client.close()
-                            print(f"You Lost! The word was {''.join(self.chosen_word)}")
+                            print(f"You Lost! The word was {''.join(chosen_word)}")
                                     
                     self.letter_number = 0
+                    
 
                 elif event.key in self.valid_letter_inputs and len(self.guess_list[self.word_number])<self.mode:
                     self.guess_list[self.word_number].append(event.unicode)
                     self.board[self.word_number][self.letter_number].letter = self.font.render(str(event.unicode).upper(),False,(250,250,250))
                     self.letter_number+=1
+
+    def handle_end(self,screen):
+        self.font = pygame.font.SysFont('Arial', 30)
+
+        run = True
+        while run:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    run = False
+
+            if self.client.winner:
+                text = f"{self.client.winner} has won the game!"
+            else:
+                text = f"Opponent left the game..."
+
+            text_surface = self.font.render(text, True, (0, 0, 0))
+            screen.blit(text_surface, (screen.get_width() / 2 - text_surface.get_width() / 2, screen.get_height() / 2 - text_surface.get_height() / 2))
+            pygame.display.update()
 
     def run(self):
         pygame.init()
@@ -268,6 +246,9 @@ class Wordle:
             # time handling for framerate
             delta_time = clock.tick(60) / 1000
             delta_time = max(0.001, min(0.1,delta_time))
+
+        self.handle_end(screen)
+        pygame.quit()
 
 if __name__ == "__main__":
     game = Wordle(Client())

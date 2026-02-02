@@ -1,6 +1,8 @@
+from pathlib import Path
 import socket
 import threading
 import json
+from typing import List
 from protocols import Protocols
 
 class Client:
@@ -9,13 +11,16 @@ class Client:
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.connect((host,port))
 
+        self.mode = 5
+        self.longer_list = self.mode_choice()
         self.closed = False
         self.started = False
-        self.questions = []
-        self.current_question_index=0
+        self.guesses = []
+        self.current_round_index=0
         self.opponent_question_index = 0
         self.opponent_name = None
         self.winner = None
+        self.points = 0
 
     def start(self):
         receive_thread = threading.Thread(target=self.receive)
@@ -40,20 +45,48 @@ class Client:
         self.closed = True
         self.server.close()
 
-    #change
-    def client_validate_answer(self,attempt):
-        question = self.questions[self.current_question_index]
-        answer = eval(question)
+    def mode_choice(self) -> List[str]:
+        BASE_DIR = Path(__file__).resolve().parent
 
-        if answer == int(attempt):
-            self.current_question_index += 1
+        with open(BASE_DIR / "word lists" / "longerfiveletterwords.txt", 'r') as file:
+            longer_fives = file.read().splitlines()
+        with open(BASE_DIR / "word lists" / "longersixletterwords.txt", 'r') as file:
+            longer_sixes = file.read().splitlines()
+        with open(BASE_DIR / "word lists" / "longersevenletterwords.txt", 'r') as file:
+            longer_sevens = file.read().splitlines()
+
+        longer_list = []
+        match self.mode:
+            case 5:
+                longer_list = longer_fives
+            case 6:
+                longer_list = longer_sixes
+            case 7:
+                longer_list = longer_sevens
+            case _:
+                pass
+            
+        return longer_list
+    #change
+    # def client_validate_answer(self,attempt):
+    #     guess = self.guesses[self.current_round_index]
+
+    #     if attempt == guess:
+    #         self.current_question_index += 1
+        
+
+    def is_word_valid(self,word: str) -> bool:
+        if word.upper() in self.longer_list:
+            return True
+        else:
+            return False
 
     def handle_response(self,response):
         r_type = response.get("type")
         data = response.get("data")
 
-        if r_type == Protocols.Response.QUESTIONS:
-            self.questions = data
+        if r_type == Protocols.Response.GUESSES:
+            self.guesses = data
         elif r_type == Protocols.Response.OPPONENT:
             self.opponent_name = data
         elif r_type == Protocols.Response.OPPONENT_ADVANCE:
@@ -66,7 +99,7 @@ class Client:
         elif r_type == Protocols.Response.OPPONENT_LEFT:
             self.close()
 
-    def get_current_question(self):
-        if self.current_question_index >= len(self.questions):
-            return ""
-        return self.questions[self.current_question_index]
+    # def get_current_question(self):
+    #     if self.current_question_index >= len(self.questions):
+    #         return ""
+    #     return self.questions[self.current_question_index]

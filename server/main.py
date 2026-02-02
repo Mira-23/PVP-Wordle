@@ -1,6 +1,7 @@
 import socket
 import threading
 import json
+from typing import Any, Dict
 from protocols import Protocols
 import time # may not need
 from room import Room 
@@ -14,7 +15,7 @@ class Server:
         self.server.listen()
 
         self.client_names = {}
-        self.opponent = {}
+        self.opponent: Dict[Any, Any] = {}
         self.rooms = {}
         self.waiting_for_pair = None
 
@@ -61,7 +62,7 @@ class Server:
             opponent = self.opponent.get(client)
 
             if room and opponent:
-                self.send(Protocols.Response.QUESTIONS, room.questions, client)
+                self.send(Protocols.Response.GUESSES, room.guesses, client)
                 time.sleep(1)
                 self.send(Protocols.Response.START, None, client)
                 break
@@ -111,6 +112,9 @@ class Server:
         r_type = message.get("type")
         data = message.get("data")
         room = self.rooms[client]
+        opponent = self.opponent.get(client)
+        if not opponent:
+            return
 
         if r_type != Protocols.Request.ANSWER:
             return
@@ -120,12 +124,12 @@ class Server:
             self.send(Protocols.Response.ANSWER_INVALID,None,client)
             return
         
-        if room.indexes[client] >= len(room.questions):
+        if room.indexes[client] >= len(room.guesses) or room.is_infinite and room.word_lost:
             if not room.finished:
                 room.finished = True
-
-            self.send_to_opponent(Protocols.Response.WINNER, self.client_names[client],client)
-            self.send(Protocols.Response.WINNER, self.client_names[client],client)
+            if client.points > opponent.points:
+                self.send_to_opponent(Protocols.Response.WINNER, self.client_names[client],client)
+                self.send(Protocols.Response.WINNER, self.client_names[client],client)
         else:
             self.send_to_opponent(Protocols.Response.OPPONENT_ADVANCE,None,client)
             self.send(Protocols.Response.ANSWER_VALID,None,client)
