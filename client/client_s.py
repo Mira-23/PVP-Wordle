@@ -13,14 +13,20 @@ class Client:
 
         self.mode = 5
         self.longer_list = self.mode_choice()
+
         self.closed = False
         self.started = False
+
         self.guesses = []
         self.current_round_index=0
-        self.opponent_question_index = 0
+
+        self.opponent_question_index=0
         self.opponent_name = None
+
         self.winner = None
         self.points = 0
+
+        self.new_round = False
 
     def start(self):
         receive_thread = threading.Thread(target=self.receive)
@@ -30,16 +36,30 @@ class Client:
         data = {"type" : request, "data":message}
         self.server.send(json.dumps(data).encode("ascii"))
 
+    # def receive(self):
+    #     while not self.closed:
+    #         try:
+    #             data = self.server.recv(1024).decode("ascii")
+    #             message = json.loads(data)
+    #             self.handle_response(message)
+    #         except:
+    #             break
+
+    #     self.close()
+
     def receive(self):
+        buffer = ""
         while not self.closed:
             try:
-                data = self.server.recv(1024).decode("ascii")
-                message = json.loads(data)
-                self.handle_response(message)
+                buffer += self.server.recv(1024).decode("ascii")
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    if line.strip() == "":
+                        continue
+                    message = json.loads(line)
+                    self.handle_response(message)
             except:
                 break
-
-        self.close()
 
     def close(self):
         self.closed = True
@@ -96,6 +116,10 @@ class Client:
         elif r_type == Protocols.Response.WINNER:
             self.winner = data
             self.close()
+        elif r_type == Protocols.Response.NEW_ROUND:
+            #self.current_round_index+=1
+            print("hi new round")
+            self.new_round = True
         elif r_type == Protocols.Response.OPPONENT_LEFT:
             self.close()
 

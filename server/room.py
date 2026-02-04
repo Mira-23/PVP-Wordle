@@ -4,13 +4,16 @@ from typing import List
 class Room:
     def __init__(self, client1, client2):
         self.mode = 5
-        self.rounds = 5
+        self.rounds = 2
         self.chosen_list, self.longer_list = self.mode_choice()
         self.guesses = self.generate_guesses(self.chosen_list)
         self.round_indexes = {client1:0,client2: 0}
         self.finished = False
         self.is_infinite = False
         self.word_lost = False
+        self.points = {client1: 0, client2: 0}
+        self.finished_players = set()
+        self.all_finished_players = set()
 
     #change
     def generate_guesses(self, chosen_list: List[str]) -> List[str]:
@@ -54,16 +57,48 @@ class Room:
             
         return chosen_list, longer_list
 
+    def calculate_points(self, guesses_used: int, seconds: float) -> int:
+        max_guesses = 6  # Wordle rows
+
+        # Guess score
+        guess_score = max(0, (max_guesses - guesses_used) * 10)
+
+        # Time bonus (steps of 30 seconds)
+        bonus_steps = max(0, 5 - int(seconds // 30))
+        time_bonus = bonus_steps * 10
+
+        return guess_score + time_bonus
+
     #change
-    def verify_answer(self,client,attempt):
-        if self.finished:
-            return False
+    def verify_answer(self, client, data):
+        # if isinstance(data, dict):
+        #     attempt = data['attempt']
+        #     client_finished_round = data.get('is_final', False)
+        # else: 
+        #     attempt = data
+        #     client_finished_round = False
+        # print(data)
+        # print(client_finished_round)  
+
+        guesses_used = data.get("guesses_used", 6)
+        seconds_taken = data.get("seconds", 999)
+
+        points = self.calculate_points(guesses_used, seconds_taken)
+
+        self.points[client] += points
+
+        self.round_indexes[client] += 1
+        self.finished_players.add(client)
+    
+    def round_finished(self):
+        print(len(self.finished_players))
+        if self.rounds == 0:
+            self.finished = True
+        else:
+            self.rounds-=1
+        return len(self.finished_players) == 2
         
-        index = self.round_indexes[client]
-        answer = self.guesses[index]
-        correct = answer == attempt
+    
+    def start_new_round(self):
+        self.finished_players.clear()
 
-        if correct:
-            self.round_indexes[client]+=1
-
-        return correct

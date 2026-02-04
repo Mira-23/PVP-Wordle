@@ -1,4 +1,5 @@
 import pygame
+import time
 from enum import Enum
 from typing import List
 from typing import Optional
@@ -43,6 +44,8 @@ class Wordle:
         #self.chosen_list, self.longer_list = self.mode_choice()
         #self.chosen_word = self.choose_random_word(self.chosen_list)
 
+        self.round_start_time = time.time()
+
         self.guess_list = [[] for _ in range(self.amount_of_guesses)]
         self.word_number = 0
         self.letter_number = 0
@@ -83,6 +86,15 @@ class Wordle:
             for cell in row:
                 if cell.letter is not None:
                     screen.blit(cell.letter, (cell.x,cell.y))
+
+    def reset_board(self):
+        self.board = [[Cell() for _ in range(self.mode)]
+                    for _ in range(self.amount_of_guesses)]
+        self.guess_list = [[] for _ in range(self.amount_of_guesses)]
+        self.word_number = 0
+        self.letter_number = 0
+        self.client.finished = False
+        self.round_start_time = time.time()
 
     def draw(self,screen):
         # white background
@@ -187,13 +199,35 @@ class Wordle:
                         #self.client.close()
                         print("You guessed it right!")
                         self.client.current_round_index+=1
+                        guess_str = ''.join(self.guess_list[self.word_number])
+                        seconds_taken = time.time() - self.round_start_time
+
+                        payload = {
+                            "guess": guess_str,
+                            "guesses_used": self.word_number + 1,
+                            "seconds": seconds_taken
+                        }
+
+                        self.client.send(Protocols.Request.ANSWER, payload)
+                        print(self.client.new_round)
                                 
                     else:
                         self.word_number+=1
 
                         if self.word_number == self.amount_of_guesses:
-                            self.client.close()
-                            print(f"You Lost! The word was {''.join(chosen_word)}")
+                            seconds_taken = time.time() - self.round_start_time
+                            self.client.current_round_index+=1
+                            guess_str = ''.join(self.guess_list[self.word_number-1])
+                            
+                            payload = {
+                                "guess": guess_str,
+                                "guesses_used": self.word_number + 1,
+                                "seconds": seconds_taken
+                            }
+
+                            self.client.send(Protocols.Request.ANSWER, payload)
+                            print(f"You didn't guess it! The word was {''.join(chosen_word)}")
+                            print(self.client.new_round)
                                     
                     self.letter_number = 0
                     
@@ -239,6 +273,10 @@ class Wordle:
                     self.client.close()
                     pygame.quit()
                 else:
+                    if self.client.new_round:
+                        print("but not this")
+                        self.reset_board()
+                        self.client.new_round = False
                     self.handle_event(event)
             
             self.draw(screen)
