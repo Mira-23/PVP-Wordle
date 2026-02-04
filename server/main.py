@@ -109,15 +109,12 @@ class Server:
         client.close()
 
     def start_new_round_for_room(self, room):
-        # Only start new round if both clients finished
         if len(room.finished_players) < 2:
             return
 
-        # Send NEW_ROUND to all clients in this room
-        for client in room.round_indexes.keys():  # client is the socket
+        for client in room.round_indexes.keys():
             self.send(Protocols.Response.NEW_ROUND, None, client)
 
-        # Reset room for the next round
         room.start_new_round()
 
     def handle_receive(self, message,client):
@@ -132,7 +129,7 @@ class Server:
         if r_type != Protocols.Request.ANSWER:
             return
         
-        room.verify_answer(client, data)
+        room.client_finished(client, data)
 
         # mark client finished all rounds
         if room.round_indexes[client] == len(room.guesses):
@@ -149,18 +146,6 @@ class Server:
                     c
                 )
             return
-        
-        # print(f"{room.round_indexes[client]=} {len(room.guesses)}=")
-        # if room.round_indexes[client] >= len(room.guesses) or room.is_infinite and room.word_lost:
-        #     if not room.finished:
-        #         room.finished = True
-        #     if client.points > opponent.points:
-        #         self.send_to_opponent(Protocols.Response.WINNER, self.client_names[client],client)
-        #         self.send(Protocols.Response.WINNER, self.client_names[client],client)
-        # else:
-        #     self.send_to_opponent(Protocols.Response.OPPONENT_ADVANCE,None,client)
-        #     self.send(Protocols.Response.ANSWER_VALID,None,client)
-
 
         # marks that client finished the round
         room.finished_players.add(client)
@@ -171,7 +156,7 @@ class Server:
 
     def send(self, r_type, data, client):
         message = {"type": r_type, "data": data}
-        message_str = json.dumps(message) + "\n"  # Add newline
+        message_str = json.dumps(message) + "\n"
         client.send(message_str.encode("ascii"))
 
     def send_to_opponent(self, r_type, data, client): 
@@ -190,4 +175,3 @@ class Server:
 if __name__ == "__main__":
     server = Server()
     server.receive()
-    

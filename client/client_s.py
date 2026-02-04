@@ -36,17 +36,6 @@ class Client:
         data = {"type" : request, "data":message}
         self.server.send(json.dumps(data).encode("ascii"))
 
-    # def receive(self):
-    #     while not self.closed:
-    #         try:
-    #             data = self.server.recv(1024).decode("ascii")
-    #             message = json.loads(data)
-    #             self.handle_response(message)
-    #         except:
-    #             break
-
-    #     self.close()
-
     def receive(self):
         buffer = ""
         while not self.closed:
@@ -87,13 +76,6 @@ class Client:
                 pass
             
         return longer_list
-    #change
-    # def client_validate_answer(self,attempt):
-    #     guess = self.guesses[self.current_round_index]
-
-    #     if attempt == guess:
-    #         self.current_question_index += 1
-        
 
     def is_word_valid(self,word: str) -> bool:
         if word.upper() in self.longer_list:
@@ -110,20 +92,15 @@ class Client:
         elif r_type == Protocols.Response.OPPONENT:
             self.opponent_name = data
         elif r_type == Protocols.Response.OPPONENT_ADVANCE:
-            self.opponent_question_index+=1
+            pass
+            #self.opponent_question_index+=1
         elif r_type == Protocols.Response.START:
             self.started = True
         elif r_type == Protocols.Response.WINNER:
             self.winner = data
             self.close()
         elif r_type == Protocols.Response.NEW_ROUND:
-            #self.current_round_index+=1
             print("hi new round")
             self.new_round = True
         elif r_type == Protocols.Response.OPPONENT_LEFT:
             self.close()
-
-    # def get_current_question(self):
-    #     if self.current_question_index >= len(self.questions):
-    #         return ""
-    #     return self.questions[self.current_question_index]

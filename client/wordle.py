@@ -41,9 +41,6 @@ class Wordle:
         self.text = ""
         self.board = [[Cell() for _ in range(self.mode)] for _ in range(self.amount_of_guesses)]
 
-        #self.chosen_list, self.longer_list = self.mode_choice()
-        #self.chosen_word = self.choose_random_word(self.chosen_list)
-
         self.round_start_time = time.time()
 
         self.guess_list = [[] for _ in range(self.amount_of_guesses)]
@@ -146,13 +143,6 @@ class Wordle:
         return False
 
     def handle_event(self, event):
-        # if event.type == pygame.MOUSEBUTTONDOWN:
-        #     if self.input_box.collidepoint(event.pos):
-        #         self.color = self.color_active
-        #     else:
-        #         self.color = self.color_inactive
-        #     return
-
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN and not self.round_active:
                 if not self.logged_in:
@@ -161,11 +151,6 @@ class Wordle:
                     self.logged_in = True
                     self.text = ""
                     self.round_active = True
-                    # elif self.client.started:
-                    #     #change text to actual asnwer
-                    #     self.client.send(Protocols.Request.ANSWER, self.text)
-                    #     self.text = ""
-                    #     self.round_active = True
             elif event.key == pygame.K_BACKSPACE and not self.round_active:
                 self.text = self.text[:-1]
             elif self.round_active:
@@ -196,7 +181,6 @@ class Wordle:
                         return
 
                     if self.guessing(self.word_number,self.guess_list[self.word_number],''.join(chosen_word)):
-                        #self.client.close()
                         print("You guessed it right!")
                         self.client.current_round_index+=1
                         guess_str = ''.join(self.guess_list[self.word_number])
@@ -230,7 +214,6 @@ class Wordle:
                             print(self.client.new_round)
                                     
                     self.letter_number = 0
-                    
 
                 elif event.key in self.valid_letter_inputs and len(self.guess_list[self.word_number])<self.mode:
                     self.guess_list[self.word_number].append(event.unicode)
@@ -274,7 +257,6 @@ class Wordle:
                     pygame.quit()
                 else:
                     if self.client.new_round:
-                        print("but not this")
                         self.reset_board()
                         self.client.new_round = False
                     self.handle_event(event)
