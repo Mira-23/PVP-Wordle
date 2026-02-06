@@ -10,6 +10,7 @@ class Protocols:
         WINNER = "protocol.winner"
         OPPONENT_LEFT = "protocol.opponent_left"
         NEW_ROUND = "protocol.new_round"
+        SETTINGS = "protocol.settings"
 
     class Request:
         ANSWER = "protocol.answer"

@@ -12,7 +12,7 @@ class Room:
         self.max_guesses = settings["max_guesses"]
 
         self.chosen_list = self.mode_choice()
-        self.guesses = self.generate_guesses(self.chosen_list)
+        self.guesses: List[List[str]] = self.generate_guesses(self.chosen_list)
 
         self.round_indexes = {host: 0}
         self.points = {host: 0}
@@ -32,7 +32,7 @@ class Room:
         return True
 
     # generates random words to be guessed based on the amount of rounds
-    def generate_guesses(self, chosen_list: List[str]) -> List[str]:
+    def generate_guesses(self, chosen_list: List[str]) -> List[List[str]]:
         guesses = []
         for i in range(self.rounds):
             random_word = chosen_list[random.randint(0, len(chosen_list)-1)]
@@ -92,8 +92,13 @@ class Room:
             self.finished = True
         else:
             self.rounds-=1
+        print("hi")
         return len(self.finished_players) == 2
     
     #clears finished players from list
     def start_new_round(self):
         self.finished_players.clear()
+        if self.is_infinite:
+            random_word = self.chosen_list[random.randint(0, len(self.chosen_list)-1)]
+            letters = list(random_word)
+            self.guesses.append(letters)

@@ -48,9 +48,16 @@ class InputBox:
         self.color_inactive = pygame.Color('black')
         self.color = self.color_inactive
         self.active = False
+        self.hidden = False
+    
+    def toggle(self):
+        if self.hidden:
+            self.color = (0,0,0)
+        else: self.color = (255,255,255)
+        self.hidden = not self.hidden
 
     def handle_event(self, event):
-        if event.type == pygame.MOUSEBUTTONDOWN:
+        if event.type == pygame.MOUSEBUTTONDOWN and not self.hidden:
             self.active = self.rect.collidepoint(event.pos)
             self.color = self.color_active if self.active else self.color_inactive
         elif event.type == pygame.KEYDOWN and self.active:
@@ -104,6 +111,7 @@ class Wordle:
 
         self.nickname = ""
 
+        self.infinite_mode = False
 
     def draw_startup_screen(self, screen):
         self.back_button = Button((20, 20, 150, 40), "Main Menu", pygame.font.SysFont('Arial', 25), bg_color=(200, 100, 100))
@@ -122,12 +130,12 @@ class Wordle:
         screen.fill((255,255,255))
         if not self.join_input_box:
             self.font = pygame.font.SysFont("Arial",30)
-            self.join_input_box = InputBox((150,250,300,50), self.font)
-            self.join_info_text = self.font.render("Enter room code to join:", True, (0,0,0))
-            self.join_nickname_box = InputBox((150,350,300,50), self.font)
+            self.join_nickname_box = InputBox((150,250,300,50), self.font)
             self.join_nickname_text = self.font.render("Enter your nickname:", True, (0,0,0))
-        screen.blit(self.join_info_text, (100, 150))
-        screen.blit(self.join_nickname_text, (100, 300))
+            self.join_input_box = InputBox((150,350,300,50), self.font)
+            self.join_info_text = self.font.render("Enter room code to join:", True, (0,0,0))
+        screen.blit(self.join_info_text, (100, 300))
+        screen.blit(self.join_nickname_text, (100, 150))
 
         self.back_button.draw(screen)
 
@@ -135,28 +143,40 @@ class Wordle:
         self.join_input_box.draw(screen)
 
     def draw_create_screen(self, screen):
-        self.back_button = Button((20, 20, 150, 40), "Main Menu", pygame.font.SysFont('Arial', 25), bg_color=(200, 100, 100))
         screen.fill((255,255,255))
         self.font = pygame.font.SysFont("Arial",30)
+        self.back_button = Button((20, 20, 150, 40), "Main Menu", pygame.font.SysFont('Arial', 25), bg_color=(200, 100, 100))
         if not self.create_buttons:
-            screen.blit(self.font.render("Enter your nickname:", True, (0,0,0)), (50, 430))
+            #label_x = 120
+            box_x = 360
+            start_y = 140
+            step = 70
+
             self.create_input_boxes = {
-                "mode": InputBox((250,150,100,40), self.font, text=str(self.mode)),
-                "attempts": InputBox((250,220,100,40), self.font, text=str(self.amount_of_guesses)),
-                "rounds": InputBox((250,290,100,40), self.font, text='5'),
-                "room_code": InputBox((250,360,100,40), self.font, text='ABCD'),
-                "nickname": InputBox((250,430,300,40), self.font, text='')
+                "nickname": InputBox((box_x, start_y, 200, 40), self.font, text=''),
+                "mode": InputBox((box_x, start_y + step, 100, 40), self.font, text=str(self.mode)),
+                "attempts": InputBox((box_x, start_y + 2 * step, 100, 40), self.font, text=str(self.amount_of_guesses)),
+                "rounds": InputBox((box_x, start_y + 3 * step, 100, 40), self.font, text='5'),
+                "room_code": InputBox((box_x, start_y + 4 * step, 100, 40), self.font, text='ABCD'),
             }
             self.create_buttons = {
-                "infinite": Button((250,430,100,40),"Infinite",self.font,bg_color=(150,250,150)),
-                "start": Button((250,500,100,40),"Start",self.font)
-            }
-            self.infinite_mode = False
-
-        labels = ["Word Length (5-7):","Attempts (2-(Word Lenght+1)):","Rounds:","Room Code:"]
-        y_positions = [150,220,290,360]
-        for label,y in zip(labels,y_positions):
-            screen.blit(self.font.render(label, True, (0,0,0)), (50,y))
+            "infinite": Button(
+                (270, start_y + 5 * step, 150, 40),
+                "Infinite: OFF",
+                self.font,
+                bg_color=(250,150,150)
+            ),
+            "start": Button(
+                (270, start_y + 6 * step, 100, 40),
+                "Start",
+                self.font,
+                bg_color=(180, 180, 180)
+            ),
+        }
+        labels = [("Nickname:", 140),("Word Length (5-7)", 210),("Attempts (2-8)", 280),("Rounds:", 350),("Room Code:", 420),]
+        for text, y in labels:
+            label_surface = self.font.render(text, True, (0, 0, 0))
+            screen.blit(label_surface, (120, y))
         for box in self.create_input_boxes.values():
             box.draw(screen)
         for btn in self.create_buttons.values():
@@ -277,6 +297,9 @@ class Wordle:
 
         if not self.join_input_box or not self.join_nickname_box:
             return
+        
+        self.join_input_box.handle_event(event)
+        self.join_nickname_box.handle_event(event)
 
         # If Enter pressed in either box, try to submit
         if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
@@ -305,7 +328,15 @@ class Wordle:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.create_buttons["infinite"].is_clicked(event.pos):
                 self.infinite_mode = not self.infinite_mode
-                self.create_buttons["infinite"].bg_color = (250,150,150) if self.infinite_mode else (150,250,150)
+                btn = self.create_buttons["infinite"]
+                if self.infinite_mode:
+                    btn.text = "Infinite: ON"
+                    btn.bg_color = (150,250,150)
+                    self.create_input_boxes["rounds"].toggle()
+                else:
+                    btn.text = "Infinite: OFF"
+                    btn.bg_color = (250,150,150)
+                    self.create_input_boxes["rounds"].toggle()
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.create_buttons["start"].is_clicked(event.pos):

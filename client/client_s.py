@@ -103,6 +103,9 @@ class Client:
 
         if r_type == Protocols.Response.GUESSES:
             self.guesses = data
+        elif r_type == Protocols.Response.SETTINGS:
+            self.mode = data["mode"]
+            self.max_guesses = data["max_guesses"]
         elif r_type == Protocols.Response.OPPONENT:
             self.opponent_name = data
         elif r_type == Protocols.Response.OPPONENT_ADVANCE:

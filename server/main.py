@@ -94,6 +94,13 @@ class Server:
             room.round_indexes = {client: 0}
             room.points = {client: 0}
 
+            self.send(Protocols.Response.SETTINGS, {
+                "mode": mode,
+                "max_guesses": attempts,
+                "rounds": rounds,
+                "infinite": infinite
+            }, client)
+
         elif r_type == Protocols.Request.ANSWER:
             if not room:
                 return
@@ -143,6 +150,12 @@ class Server:
             if len(room.round_indexes) == 2:
                 for c in room.round_indexes.keys():
                     self.send(Protocols.Response.GUESSES, room.guesses, c)
+                    self.send(Protocols.Response.SETTINGS, {  # Add this!
+                        "mode": room.mode,
+                        "max_guesses": room.max_guesses,
+                        "rounds": room.rounds,
+                        "infinite": room.is_infinite
+                    }, c)
                     self.send(Protocols.Response.START, None, c)
 
     def send(self, r_type, data, client):
