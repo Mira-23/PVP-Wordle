@@ -17,56 +17,7 @@ class Server:
         self.client_names = {}
         self.opponent: Dict[Any, Any] = {}
         self.rooms = {}
-        #self.waiting_for_pair = None
         self.waiting_rooms = {}  # room_code -> Room
-
-    # def handle_connect(self, client):
-    #     while True:
-    #         self.send(Protocols.Response.NICKNAME, None, client)
-    #         message = json.loads(client.recv(1024).decode("ascii"))
-    #         r_type = message.get("type")
-    #         nickname = message.get("data")
-
-    #         if r_type == Protocols.Request.NICKNAME:
-    #             self.client_names[client] = nickname
-    #         else:
-    #             continue
-
-    #         #change    
-    #         if not self.waiting_for_pair:
-    #             self.waiting_for_pair = client
-    #             print("waiting for a room")
-    #         else:
-    #             self.create_room(client)
-
-    #         break
-
-    # def create_room(self,client):
-    #     print("Creating room.")
-    #     room = Room(client,self.waiting_for_pair)
-    #     self.opponent[client] = self.waiting_for_pair
-    #     #change
-    #     self.opponent[self.waiting_for_pair] = client
-
-    #     self.send(Protocols.Response.OPPONENT, self.client_names[client], self.waiting_for_pair)
-    #     self.send(Protocols.Response.OPPONENT, self.client_names[self.waiting_for_pair], client)
-
-    #     self.rooms[client] = room
-    #     #change
-    #     self.rooms[self.waiting_for_pair] = room
-    #     self.waiting_for_pair = None
-
-    # #change
-    # def wait_for_room(self,client):
-    #     while True:
-    #         room = self.rooms.get(client)
-    #         opponent = self.opponent.get(client)
-
-    #         if room and opponent:
-    #             self.send(Protocols.Response.GUESSES, room.guesses, client)
-    #             time.sleep(1)
-    #             self.send(Protocols.Response.START, None, client)
-    #             break
 
     def handle(self, client):
         print("Client connected.")
@@ -88,61 +39,27 @@ class Server:
             client
         )
 
-    def disconnect(self, client):
-        opponent = self.opponent.get(client)
-        if opponent in self.opponent:
-            del self.opponent[opponent]
-
-        if client in self.opponent:
-            del self.opponent[client]
-
-
-        if client in self.client_names:
-            del self.client_names[client]
-
-        if opponent in self.client_names:
-            del self.client_names[opponent]
-
-
-        if client in self.rooms:
-            del self.rooms[client]
-
-        if opponent in self.rooms:
-            del self.rooms[opponent]
-
-        client.close()
-
     def start_new_round_for_room(self, room):
-        # Wait until both players finish
         if len(room.finished_players) < 2:
             return
 
-        # Decrement rounds first
         room.rounds -= 1
 
-        # Check if the game is over
-        if room.rounds < 0:
-            room.rounds = 0
-
-        if room.rounds == 0:
-            # Determine winner
+        if room.rounds <= 0:
             winner_client = max(room.points, key=room.points.get)
             winner_name = self.client_names[winner_client]
 
             for c in room.round_indexes.keys():
                 self.send(Protocols.Response.WINNER, winner_name, c)
-                # Clean up room
                 del self.rooms[c]
                 if c in self.opponent:
                     del self.opponent[c]
 
-            return  # stop, no new round
+            return
 
-        # Otherwise, start a new round
         for client in room.round_indexes.keys():
             self.send(Protocols.Response.NEW_ROUND, None, client)
 
-        # Reset finished players for next round
         room.finished_players.clear()
 
     def handle_receive(self, message, client):
@@ -151,7 +68,6 @@ class Server:
 
         room = self.rooms.get(client)
 
-        # ---- CREATE GAME ----
         if r_type == Protocols.Request.CREATE_GAME:
             room_code = data.get("room_code")
             nickname = data.get("nickname")
@@ -160,14 +76,13 @@ class Server:
             rounds = data.get("rounds", 5)
             infinite = data.get("infinite", False)
 
-            # Create room with first player
             default_settings = {
                 "mode": 5,
                 "rounds": 5,
                 "infinite": False,
                 "max_guesses": 6
             }
-            room = Room(client, default_settings)
+            room = Room(client, default_settings) 
             room.mode = mode
             room.rounds = rounds
             room.max_guesses = attempts
@@ -175,60 +90,50 @@ class Server:
 
             self.rooms[room_code] = room
             self.client_names[client] = nickname
-            print(room_code)
-            print(self.rooms[room_code])
 
-            # Only one player for now
             room.round_indexes = {client: 0}
             room.points = {client: 0}
+
         elif r_type == Protocols.Request.ANSWER:
             if not room:
                 return
             room.client_finished(client, data)
-            # Let the function handle both new round and winner logic
+
             self.start_new_round_for_room(room)
+            
         elif r_type == Protocols.Request.LEAVE:
             room = self.rooms.get(client)
             if room:
                 opponent = self.opponent.get(client)
                 if opponent:
                     self.send(Protocols.Response.OPPONENT_LEFT, None, opponent)
-                    # Remove opponent reference
                     del self.opponent[opponent]
-                # Remove client from room
                 del self.rooms[client]
                 if client in room.round_indexes:
                     del room.round_indexes[client]
 
-        # ---- JOIN GAME ----
         elif r_type == Protocols.Request.JOIN_GAME:
             room_code = data.get("room_code")
             nickname = data.get("nickname")
             room = self.rooms[room_code]
 
-            print(room_code)
-            print(room)
             if not room:
                 self.send(Protocols.Response.ANSWER_INVALID, "Room not found", client)
                 return
 
-            # Only allow one more player
             if len(room.round_indexes) >= 2:
                 self.send(Protocols.Response.ANSWER_INVALID, "Room full", client)
                 return
 
-            # Add second player
             second_client = client
             room.round_indexes[second_client] = 0
             room.points[second_client] = 0
             self.client_names[second_client] = nickname
 
-            # Set opponent references
             first_client = [c for c in room.round_indexes.keys() if c != second_client][0]
             self.opponent[first_client] = second_client
             self.opponent[second_client] = first_client
 
-            
             self.rooms[second_client] = room
             self.rooms[first_client] = room
 
@@ -239,7 +144,6 @@ class Server:
                 for c in room.round_indexes.keys():
                     self.send(Protocols.Response.GUESSES, room.guesses, c)
                     self.send(Protocols.Response.START, None, c)
-                    # On client side, started = True
 
     def send(self, r_type, data, client):
         message = {"type": r_type, "data": data}

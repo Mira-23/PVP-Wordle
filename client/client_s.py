@@ -107,16 +107,13 @@ class Client:
             self.opponent_name = data
         elif r_type == Protocols.Response.OPPONENT_ADVANCE:
             pass
-            #self.opponent_question_index+=1
         elif r_type == Protocols.Response.START:
             print("Received START from server")
             self.started = True
         elif r_type == Protocols.Response.WINNER:
             self.winner = data
-            #self.close()
         elif r_type == Protocols.Response.NEW_ROUND:
             print("hi new round")
             self.new_round = True
         elif r_type == Protocols.Response.OPPONENT_LEFT:
             self.opponent_left = True
-            #self.close()

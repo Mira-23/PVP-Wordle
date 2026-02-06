@@ -73,11 +73,8 @@ class Wordle:
         client.start()
 
         self.game_state = "startup"
-        self.choice = None
         self.room_code = None
         self.settings: Optional[Dict[str, Any]] = None
-
-        self.logged_in = False
 
         self.font = None
 
@@ -106,8 +103,6 @@ class Wordle:
         self.create_input_boxes = {}
 
         self.nickname = ""
-        self.pending_join_code = None
-        self.pending_settings = None
 
 
     def draw_startup_screen(self, screen):
@@ -129,7 +124,7 @@ class Wordle:
             self.font = pygame.font.SysFont("Arial",30)
             self.join_input_box = InputBox((150,250,300,50), self.font)
             self.join_info_text = self.font.render("Enter room code to join:", True, (0,0,0))
-            self.join_nickname_box = InputBox((150,350,300,50), self.font)  # nickname
+            self.join_nickname_box = InputBox((150,350,300,50), self.font)
             self.join_nickname_text = self.font.render("Enter your nickname:", True, (0,0,0))
         screen.blit(self.join_info_text, (100, 150))
         screen.blit(self.join_nickname_text, (100, 300))
@@ -174,29 +169,7 @@ class Wordle:
         text = "Waiting For Player..."
             
         text_surface = self.font.render(text, True, (0, 0, 0))
-        screen.blit(
-            text_surface,
-            (screen.get_width()/2 - text_surface.get_width()/2, 
-            screen.get_height()/2 - text_surface.get_height()/2)
-        )
-
-    def draw_login(self, screen):
-        self.font = pygame.font.SysFont('Arial', 30)
-
-        # Display prompt
-        text = 'Enter A Nickname'
-        text_surface = self.font.render(text, True, (0, 0, 0))
-        screen.blit(text_surface, (100, 50))
-
-        # Draw input box
-        pygame.draw.rect(screen, self.color, self.input_box, 2)
-
-        # Render the actual nickname being typed
-        txt_surface = self.font.render(self.nickname, True, self.color)
-        screen.blit(txt_surface, (self.input_box.x + 5, self.input_box.y + 5))
-
-        # Adjust width of input box dynamically
-        self.input_box.w = max(100, txt_surface.get_width() + 10)
+        screen.blit(text_surface, (screen.get_width()/2 - text_surface.get_width()/2, screen.get_height()/2 - text_surface.get_height()/2))
 
     def draw_game(self,screen):
         cell_size = 50
@@ -239,7 +212,6 @@ class Wordle:
             self.draw_game(screen)
 
         pygame.display.flip()
-
 
 # fix board type hint
     def guessing(self, row: int, guess_letters: List[str], word : str) -> bool:
@@ -291,39 +263,13 @@ class Wordle:
         elif self.game_state == "playing" and self.round_active:
             self.handle_wordle_event(event)
 
-    def handle_event_nickname(self, event):
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_RETURN and self.nickname.strip() != "":
-                self.client.nickname = self.nickname
-
-                if self.game_state == "join_nickname":
-                    payload = {"room_code": self.pending_join_code, "nickname": self.nickname}
-                    self.client.send(Protocols.Request.JOIN_GAME, payload)
-
-                elif self.game_state == "create_nickname":
-                    if not self.pending_settings:
-                        return
-                    payload = self.pending_settings.copy()
-                    payload["nickname"] = self.nickname
-                    self.client.send(Protocols.Request.CREATE_GAME, payload)
-
-                # Enter waiting state for UI immediately
-                self.game_state = "waiting"
-
-            elif event.key == pygame.K_BACKSPACE:
-                self.nickname = self.nickname[:-1]
-            else:
-                self.nickname += event.unicode
-
     def handle_event_startup(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
             for btn in self.startup_buttons:
                 if btn.is_clicked(event.pos):
-                    self.choice = btn.text.lower().split()[0]
-                    self.game_state = self.choice
+                    self.game_state = btn.text.lower().split()[0]
 
     def handle_event_join(self, event):
-        # Main menu button
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.back_button.is_clicked(event.pos):
                 self.return_to_main_menu()
@@ -332,47 +278,35 @@ class Wordle:
         if not self.join_input_box or not self.join_nickname_box:
             return
 
-        # Let the input boxes handle clicks and typing
-        room_result = self.join_input_box.handle_event(event)
-        nick_result = self.join_nickname_box.handle_event(event)
-
         # If Enter pressed in either box, try to submit
         if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
             room_code = self.join_input_box.text.strip()
             nickname = self.join_nickname_box.text.strip()
 
             if not room_code or not nickname:
-                return  # optionally, display warning
+                return
 
-            # Send JOIN_GAME request with nickname
             self.client.send(Protocols.Request.JOIN_GAME, {
                 "room_code": room_code,
                 "nickname": nickname
             })
 
-            # Move to waiting screen
             self.game_state = "waiting"
 
-
-
     def handle_event_create(self, event):
-        # Handle typing in all input boxes
         for box in self.create_input_boxes.values():
             box.handle_event(event)
 
-        # Main menu button
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.back_button.is_clicked(event.pos):
                 self.return_to_main_menu()
                 return
 
-        # Infinite button toggle
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.create_buttons["infinite"].is_clicked(event.pos):
                 self.infinite_mode = not self.infinite_mode
                 self.create_buttons["infinite"].bg_color = (250,150,150) if self.infinite_mode else (150,250,150)
 
-        # Start button or Enter key sends create request
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.create_buttons["start"].is_clicked(event.pos):
                 send_create = True
@@ -386,7 +320,7 @@ class Wordle:
         if send_create:
             nickname = self.create_input_boxes["nickname"].text.strip()
             if not nickname:
-                return  # optionally, display warning
+                return
 
             payload = {
                 "mode": int(self.create_input_boxes["mode"].text),
@@ -397,14 +331,11 @@ class Wordle:
                 "infinite": self.infinite_mode
             }
 
-            # Update local game settings
             self.mode = payload["mode"]
             self.amount_of_guesses = payload["attempts"]
 
-            # Send CREATE_GAME request
             self.client.send(Protocols.Request.CREATE_GAME, payload)
             self.game_state = "waiting"
-
 
     def handle_wordle_event(self,event):
         self.font = pygame.font.SysFont('Arial', 30)
@@ -412,7 +343,7 @@ class Wordle:
 
         if self.round_active:
             if event.type == pygame.KEYDOWN:
-                 # delete character
+                # delete character
                 if event.key == pygame.K_BACKSPACE:
 
                     self.guess_list[self.word_number] = self.guess_list[self.word_number][:-1]
@@ -467,8 +398,9 @@ class Wordle:
                     self.board[self.word_number][self.letter_number].letter = self.font.render(str(event.unicode).upper(),False,(250,250,250))
                     self.letter_number+=1
 
+    # resets game variables
     def return_to_main_menu(self):
-        # Reset game variables
+        
         self.game_state = "startup"
         self.round_active = False
         self.word_number = 0
@@ -476,18 +408,15 @@ class Wordle:
         self.guess_list = [[] for _ in range(self.amount_of_guesses)]
         self.board = [[Cell() for _ in range(self.mode)] for _ in range(self.amount_of_guesses)]
         
-        # Reset any pending room/nickname info
         self.nickname = ""
         self.pending_join_code = None
         self.pending_settings = None
         
-        # Optionally reconnect or just reset game without closing server
         self.client.started = False
         self.client.new_round = False
 
         self.client.opponent_left = False
         self.client.winner = None
-
 
     def handle_end(self, screen):
         self.font = pygame.font.SysFont('Arial', 30)
@@ -495,9 +424,6 @@ class Wordle:
 
         run = True
         while run:
-            #screen.fill((255, 255, 255))
-
-            # Display winner / opponent left
             if self.client.winner:
                 text = f"{self.client.winner} has won the game!"
             else:
@@ -510,7 +436,6 @@ class Wordle:
                 screen.get_height() / 2 - text_surface.get_height() / 2)
             )
 
-            # Draw the Main Menu button
             self.back_button.draw(screen)
             pygame.display.update()
 
@@ -522,14 +447,11 @@ class Wordle:
                     return
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if self.back_button.is_clicked(event.pos):
-                        # Notify server we're leaving
                         self.client.send(Protocols.Request.LEAVE, {})
 
-                        # Reset everything for main menu
                         self.return_to_main_menu()
 
-                        # Exit handle_end loop
-                        run = False  # <-- don't use 'return' here
+                        run = False
 
     def run(self):
         pygame.init()
@@ -552,7 +474,6 @@ class Wordle:
 
             self.draw(screen)
 
-            # Fix for waiting -> playing transition
             if self.game_state == "waiting":
                 if self.client.started:
                     self.game_state = "playing"
@@ -565,19 +486,13 @@ class Wordle:
 
             if self.client.winner or self.client.opponent_left:
                 self.handle_end(screen)
-                # Reset game for main menu
                 self.return_to_main_menu()
                 continue
 
-            # Maintain framerate
             delta_time = clock.tick(60) / 1000
             delta_time = max(0.001, min(0.1, delta_time))
-
-        # End screen
-        #self.handle_end(screen)
+        self.client.close()
         pygame.quit()
-
-
 
 if __name__ == "__main__":
     game = Wordle(Client())
