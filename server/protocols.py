@@ -15,3 +15,5 @@ class Protocols:
         ANSWER = "protocol.answer"
         NICKNAME = "protocol.send_nickname"
         LEAVE = "protocol.leave"
+        JOIN_GAME = "protocol.join_game"
+        CREATE_GAME = "protocol.create_game"

@@ -1,7 +1,7 @@
 class Protocols:
     class Response:
         NICKNAME = "protocol.request_nickname"
-        GUESSES = "protocol.guesses" # should be changed
+        GUESSES = "protocol.guesses"
         START = "protocol.start"
         OPPONENT = "protocol.opponent"
         OPPONENT_ADVANCE = 'protocol.opponent_advance'
@@ -15,3 +15,5 @@ class Protocols:
         ANSWER = "protocol.answer"
         NICKNAME = "protocol.send_nickname"
         LEAVE = "protocol.leave"
+        JOIN_GAME = "protocol.join_game"
+        CREATE_GAME = "protocol.create_game"

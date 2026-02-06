@@ -2,23 +2,34 @@ from pathlib import Path
 import random
 from typing import List
 class Room:
-    def __init__(self, client1, client2):
-        self.mode = 5
-        self.rounds = 5
-        self.max_guesses = self.mode + 1 # change
+    def __init__(self, host, settings):
+        self.host = host
+        self.guest = None   # second player later
+
+        self.mode = settings["mode"]
+        self.rounds = settings["rounds"]
+        self.is_infinite = settings["infinite"]
+        self.max_guesses = settings["max_guesses"]
 
         self.chosen_list = self.mode_choice()
         self.guesses = self.generate_guesses(self.chosen_list)
 
-        self.round_indexes = {client1:0,client2: 0}
+        self.round_indexes = {host: 0}
+        self.points = {host: 0}
 
         self.finished = False
-        self.is_infinite = False
-
-        self.points = {client1: 0, client2: 0}
 
         self.finished_players = set()
         self.all_finished_players = set()
+
+    def add_player(self, client):
+        if self.guest is not None:
+            return False  # room full
+
+        self.guest = client
+        self.round_indexes[client] = 0
+        self.points[client] = 0
+        return True
 
     # generates random words to be guessed based on the amount of rounds
     def generate_guesses(self, chosen_list: List[str]) -> List[str]:

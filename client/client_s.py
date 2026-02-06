@@ -27,14 +27,28 @@ class Client:
         self.points = 0
 
         self.new_round = False
+        self.opponent_left = False
+
+    def send_create(self, payload):
+        self.send(Protocols.Request.CREATE_GAME, payload)
+
+    def send_join(self, room_code, nickname):
+        self.send(
+            Protocols.Request.JOIN_GAME,
+            {
+                "room_code": room_code,
+                "nickname": nickname
+            }
+    )
 
     def start(self):
         receive_thread = threading.Thread(target=self.receive)
         receive_thread.start()
 
-    def send(self,request,message):
-        data = {"type" : request, "data":message}
-        self.server.send(json.dumps(data).encode("ascii"))
+    def send(self, request, message):
+        data = {"type": request, "data": message}
+        message_str = json.dumps(data) + "\n"   # <- add newline
+        self.server.send(message_str.encode("ascii"))
 
     def receive(self):
         buffer = ""
@@ -95,12 +109,14 @@ class Client:
             pass
             #self.opponent_question_index+=1
         elif r_type == Protocols.Response.START:
+            print("Received START from server")
             self.started = True
         elif r_type == Protocols.Response.WINNER:
             self.winner = data
-            self.close()
+            #self.close()
         elif r_type == Protocols.Response.NEW_ROUND:
             print("hi new round")
             self.new_round = True
         elif r_type == Protocols.Response.OPPONENT_LEFT:
-            self.close()
+            self.opponent_left = True
+            #self.close()
