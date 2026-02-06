@@ -6,11 +6,12 @@ class Protocols:
         OPPONENT = "protocol.opponent"
         OPPONENT_ADVANCE = 'protocol.opponent_advance'
         ANSWER_VALID = "protocol.answer_valid"
-        ANSWER_INVALID = 'protocol.answer_invalid'
+        INVALID_REQUEST = 'protocol.invalid_request'
         WINNER = "protocol.winner"
         OPPONENT_LEFT = "protocol.opponent_left"
         NEW_ROUND = "protocol.new_round"
         SETTINGS = "protocol.settings"
+        POINTS_UPDATE = "protocol.points_update"
 
     class Request:
         ANSWER = "protocol.answer"

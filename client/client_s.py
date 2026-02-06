@@ -12,7 +12,6 @@ class Client:
         self.server.connect((host,port))
 
         self.mode = 5
-        self.longer_list = self.mode_choice()
 
         self.closed = False
         self.started = False
@@ -25,21 +24,10 @@ class Client:
 
         self.winner = None
         self.points = 0
+        self.opponent_points = 0
 
         self.new_round = False
         self.opponent_left = False
-
-    def send_create(self, payload):
-        self.send(Protocols.Request.CREATE_GAME, payload)
-
-    def send_join(self, room_code, nickname):
-        self.send(
-            Protocols.Request.JOIN_GAME,
-            {
-                "room_code": room_code,
-                "nickname": nickname
-            }
-    )
 
     def start(self):
         receive_thread = threading.Thread(target=self.receive)
@@ -106,8 +94,16 @@ class Client:
         elif r_type == Protocols.Response.SETTINGS:
             self.mode = data["mode"]
             self.max_guesses = data["max_guesses"]
+            self.longer_list = self.mode_choice()
         elif r_type == Protocols.Response.OPPONENT:
-            self.opponent_name = data
+            # Handle opponent data which now includes points
+            if isinstance(data, dict):
+                self.opponent_name = data.get("name")
+                self.opponent_points = data.get("points", 0)
+            else:
+                # Backward compatibility - data is just name string
+                self.opponent_name = data
+                self.opponent_points = 0
         elif r_type == Protocols.Response.OPPONENT_ADVANCE:
             pass
         elif r_type == Protocols.Response.START:
@@ -116,7 +112,10 @@ class Client:
         elif r_type == Protocols.Response.WINNER:
             self.winner = data
         elif r_type == Protocols.Response.NEW_ROUND:
-            print("hi new round")
+            self.current_round_index += 1
             self.new_round = True
+        elif r_type == Protocols.Response.POINTS_UPDATE:  # Add this handler
+            self.points = data.get("your_points", 0)
+            self.opponent_points = data.get("opponent_points", 0)
         elif r_type == Protocols.Response.OPPONENT_LEFT:
             self.opponent_left = True

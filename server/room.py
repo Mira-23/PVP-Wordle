@@ -17,10 +17,7 @@ class Room:
         self.round_indexes = {host: 0}
         self.points = {host: 0}
 
-        self.finished = False
-
         self.finished_players = set()
-        self.all_finished_players = set()
 
     def add_player(self, client):
         if self.guest is not None:
@@ -75,30 +72,34 @@ class Room:
         return guess_score + time_bonus
 
     # triggered when a player finishes a round, calculates points and prepares for new round
+    # def client_finished(self, client, data):
+    #     guesses_used = data.get("guesses_used", self.max_guesses)
+    #     seconds_taken = data.get("seconds", 999)
+
+    #     points = self.calculate_points(guesses_used, seconds_taken)
+
+    #     self.points[client] += points
+
+    #     self.round_indexes[client] += 1
+    #     self.finished_players.add(client)
+
     def client_finished(self, client, data):
         guesses_used = data.get("guesses_used", self.max_guesses)
         seconds_taken = data.get("seconds", 999)
-
+        success = data.get("success", False)
+        
         points = self.calculate_points(guesses_used, seconds_taken)
-
         self.points[client] += points
-
-        self.round_indexes[client] += 1
-        self.finished_players.add(client)
-    
-    # checks if room is finished, decreases rounds left if it isnt
-    def round_finished(self):
-        if self.rounds == 0:
-            self.finished = True
+        
+        if success:
+            # Successful guess - advance to next round
+            self.round_indexes[client] += 1
         else:
-            self.rounds-=1
-        print("hi")
-        return len(self.finished_players) == 2
-    
-    #clears finished players from list
-    def start_new_round(self):
-        self.finished_players.clear()
-        if self.is_infinite:
-            random_word = self.chosen_list[random.randint(0, len(self.chosen_list)-1)]
-            letters = list(random_word)
-            self.guesses.append(letters)
+            # Failed guess - track for infinite mode game end check
+            if not hasattr(self, 'failed_players'):
+                self.failed_players = set()
+            self.failed_players.add(client)
+            # In non-infinite mode, player still advances (handled in start_new_round_for_room)
+            # In infinite mode, player does NOT advance
+        
+        self.finished_players.add(client)

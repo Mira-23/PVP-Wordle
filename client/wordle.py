@@ -94,7 +94,7 @@ class Wordle:
         self.color = self.color_inactive
         self.input_box = pygame.Rect(100,100,400,32)
         self.text = ""
-        self.board = [[Cell() for _ in range(self.mode)] for _ in range(self.amount_of_guesses)]
+        self.board = []
 
         self.round_start_time = time.time()
 
@@ -112,6 +112,67 @@ class Wordle:
         self.nickname = ""
 
         self.infinite_mode = False
+
+        self.keyboard_letters = {
+            'A': CellColors.WHITE, 'B': CellColors.WHITE, 'C': CellColors.WHITE,
+            'D': CellColors.WHITE, 'E': CellColors.WHITE, 'F': CellColors.WHITE,
+            'G': CellColors.WHITE, 'H': CellColors.WHITE, 'I': CellColors.WHITE,
+            'J': CellColors.WHITE, 'K': CellColors.WHITE, 'L': CellColors.WHITE,
+            'M': CellColors.WHITE, 'N': CellColors.WHITE, 'O': CellColors.WHITE,
+            'P': CellColors.WHITE, 'Q': CellColors.WHITE, 'R': CellColors.WHITE,
+            'S': CellColors.WHITE, 'T': CellColors.WHITE, 'U': CellColors.WHITE,
+            'V': CellColors.WHITE, 'W': CellColors.WHITE, 'X': CellColors.WHITE,
+            'Y': CellColors.WHITE, 'Z': CellColors.WHITE
+        }
+
+    def draw_keyboard(self, screen):
+        # Keyboard layout (QWERTY)
+        keyboard_rows = [
+            ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+            ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+            ['Z', 'X', 'C', 'V', 'B', 'N', 'M']
+        ]
+        
+        key_size = 40
+        key_spacing = 5
+        start_y = 500  # Bottom of screen
+        
+        for row_idx, row in enumerate(keyboard_rows):
+            # Calculate row width to center it
+            row_width = len(row) * (key_size + key_spacing) - key_spacing
+            start_x = (640 - row_width) // 2
+            
+            for col_idx, letter in enumerate(row):
+                key_x = start_x + col_idx * (key_size + key_spacing)
+                key_y = start_y + row_idx * (key_size + key_spacing + 5)
+                
+                # Get color for this key
+                key_color = self.keyboard_letters.get(letter, CellColors.WHITE)
+                
+                # Draw key background
+                pygame.draw.rect(
+                    screen, 
+                    key_color.value, 
+                    (key_x, key_y, key_size, key_size),
+                    border_radius=4
+                )
+                
+                # Draw key border
+                pygame.draw.rect(
+                    screen,
+                    (50, 50, 50),
+                    (key_x, key_y, key_size, key_size),
+                    2,
+                    border_radius=4
+                )
+                
+                # Draw letter
+                font = pygame.font.SysFont('Arial', 20, bold=True)
+                text_color = (255, 255, 255) if key_color in [CellColors.BLACK, CellColors.GREEN] else (0, 0, 0)
+                letter_surface = font.render(letter, True, text_color)
+                text_x = key_x + (key_size - letter_surface.get_width()) // 2
+                text_y = key_y + (key_size - letter_surface.get_height()) // 2
+                screen.blit(letter_surface, (text_x, text_y))
 
     def draw_startup_screen(self, screen):
         self.back_button = Button((20, 20, 150, 40), "Main Menu", pygame.font.SysFont('Arial', 25), bg_color=(200, 100, 100))
@@ -135,7 +196,7 @@ class Wordle:
             self.join_input_box = InputBox((150,350,300,50), self.font)
             self.join_info_text = self.font.render("Enter room code to join:", True, (0,0,0))
         screen.blit(self.join_info_text, (100, 300))
-        screen.blit(self.join_nickname_text, (100, 150))
+        screen.blit(self.join_nickname_text, (100, 200))
 
         self.back_button.draw(screen)
 
@@ -191,6 +252,41 @@ class Wordle:
         text_surface = self.font.render(text, True, (0, 0, 0))
         screen.blit(text_surface, (screen.get_width()/2 - text_surface.get_width()/2, screen.get_height()/2 - text_surface.get_height()/2))
 
+    def draw_score(self, screen):
+        # Set up fonts
+        score_font = pygame.font.SysFont('Arial', 24)
+        title_font = pygame.font.SysFont('Arial', 28, bold=True)
+        
+        # Score box position (right side of screen)
+        score_box_x = 20
+        score_box_y = 150
+        box_width = 140
+        box_height = 120
+        
+        # Draw score box background
+        pygame.draw.rect(screen, (240, 240, 240), (score_box_x, score_box_y, box_width, box_height))
+        pygame.draw.rect(screen, (100, 100, 100), (score_box_x, score_box_y, box_width, box_height), 2)
+        
+        # Draw title
+        title = title_font.render("SCORE", True, (0, 0, 0))
+        screen.blit(title, (score_box_x + (box_width - title.get_width()) // 2, score_box_y + 10))
+        
+        # Draw player score (you)
+        player_score = score_font.render(f"You: {self.client.points}", True, (0, 100, 0))
+        screen.blit(player_score, (score_box_x + 20, score_box_y + 50))
+        
+        # Draw opponent score (if opponent exists)
+        if self.client.opponent_name:
+            # We need to get opponent's points - but we don't have them!
+            # Let's assume we have opponent_points attribute in client
+            if hasattr(self.client, 'opponent_points'):
+                opponent_score = score_font.render(f"{self.client.opponent_name}: {self.client.opponent_points}", True, (200, 0, 0))
+                screen.blit(opponent_score, (score_box_x + 20, score_box_y + 80))
+            else:
+                # Show opponent name without points if we don't have their points
+                opponent_name = score_font.render(f"{self.client.opponent_name}: ?", True, (200, 0, 0))
+                screen.blit(opponent_name, (score_box_x + 20, score_box_y + 80))
+
     def draw_game(self,screen):
         cell_size = 50
 
@@ -208,14 +304,21 @@ class Wordle:
                 if cell.letter is not None:
                     screen.blit(cell.letter, (cell.x,cell.y))
 
+        self.draw_score(screen)
+
+        self.draw_keyboard(screen)
+
     def reset_board(self):
         self.board = [[Cell() for _ in range(self.mode)]
                     for _ in range(self.amount_of_guesses)]
         self.guess_list = [[] for _ in range(self.amount_of_guesses)]
         self.word_number = 0
         self.letter_number = 0
-        self.client.finished = False
         self.round_start_time = time.time()
+        
+        # Reset keyboard colors
+        for letter in self.keyboard_letters:
+            self.keyboard_letters[letter] = CellColors.WHITE
 
     def draw(self, screen):
         screen.fill((255, 255, 255))
@@ -238,6 +341,39 @@ class Wordle:
         guess = ''.join(guess_letters).upper()
         guess_letters = list(guess)
         letters = list(word.upper())
+
+            # Track letter statuses for this guess
+        letter_status = {}  # letter -> best status found
+        
+        # First pass: mark correct positions (green)
+        for index, letter in enumerate(letters):
+            if letter == guess_letters[index]:
+                letter_status[letter] = CellColors.GREEN
+        
+        # Second pass: mark present but wrong position (yellow)
+        for index, guess_letter in enumerate(guess_letters):
+            if guess_letter in letters and guess_letter != letters[index]:
+                # Only mark yellow if not already green
+                if guess_letter not in letter_status:
+                    letter_status[guess_letter] = CellColors.YELLOW
+        
+        # Third pass: mark absent letters (black)
+        for guess_letter in guess_letters:
+            if guess_letter not in letters:
+                letter_status[guess_letter] = CellColors.BLACK
+        
+        # Update keyboard with best status for each letter
+        # Priority: Green > Yellow > Black > White
+        for letter, status in letter_status.items():
+            current_status = self.keyboard_letters.get(letter, CellColors.WHITE)
+            
+            # Only upgrade status (never downgrade)
+            if status == CellColors.GREEN:
+                self.keyboard_letters[letter] = CellColors.GREEN
+            elif status == CellColors.YELLOW and current_status not in [CellColors.GREEN]:
+                self.keyboard_letters[letter] = CellColors.YELLOW
+            elif status == CellColors.BLACK and current_status == CellColors.WHITE:
+                self.keyboard_letters[letter] = CellColors.BLACK
 
         # logic
         if guess == word:
@@ -370,6 +506,10 @@ class Wordle:
 
     def handle_wordle_event(self,event):
         self.font = pygame.font.SysFont('Arial', 30)
+
+        if self.client.current_round_index >= len(self.client.guesses):
+            return
+        
         chosen_word = self.client.guesses[self.client.current_round_index]
 
         if self.round_active:
@@ -391,14 +531,15 @@ class Wordle:
 
                     if self.guessing(self.word_number,self.guess_list[self.word_number],''.join(chosen_word)):
                         print("You guessed it right!")
-                        self.client.current_round_index+=1
+                        #self.client.current_round_index+=1
                         guess_str = ''.join(self.guess_list[self.word_number])
                         seconds_taken = time.time() - self.round_start_time
 
                         payload = {
                             "guess": guess_str,
                             "guesses_used": self.word_number + 1,
-                            "seconds": seconds_taken
+                            "seconds": seconds_taken,
+                            "success": True  # Add this
                         }
 
                         self.client.send(Protocols.Request.ANSWER, payload)
@@ -409,13 +550,14 @@ class Wordle:
 
                         if self.word_number == self.amount_of_guesses:
                             seconds_taken = time.time() - self.round_start_time
-                            self.client.current_round_index+=1
+                            #self.client.current_round_index+=1
                             guess_str = ''.join(self.guess_list[self.word_number-1])
                             
                             payload = {
                                 "guess": guess_str,
                                 "guesses_used": self.word_number + 1,
-                                "seconds": seconds_taken
+                                "seconds": seconds_taken,
+                                "success": False
                             }
 
                             self.client.send(Protocols.Request.ANSWER, payload)
@@ -434,10 +576,7 @@ class Wordle:
         
         self.game_state = "startup"
         self.round_active = False
-        self.word_number = 0
-        self.letter_number = 0
-        self.guess_list = [[] for _ in range(self.amount_of_guesses)]
-        self.board = [[Cell() for _ in range(self.mode)] for _ in range(self.amount_of_guesses)]
+        self.reset_board()
         
         self.nickname = ""
         self.pending_join_code = None
@@ -508,6 +647,9 @@ class Wordle:
             if self.game_state == "waiting":
                 if self.client.started:
                     self.game_state = "playing"
+                    self.mode = self.client.mode
+                    self.amount_of_guesses = self.client.max_guesses
+                    self.board = [[Cell() for _ in range(self.mode)] for _ in range(self.amount_of_guesses)]
                     self.round_active = True
                     self.round_start_time = time.time()
 
