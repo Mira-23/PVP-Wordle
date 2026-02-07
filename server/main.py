@@ -125,6 +125,7 @@ class Server:
             room.rounds = rounds
             room.max_guesses = attempts
             room.is_infinite = infinite
+            room.nicknames.append(nickname)
 
             self.rooms_by_code[room_code] = room
             self.client_to_room[client] = room
@@ -225,6 +226,14 @@ class Server:
                     client
                 )
                 return
+            
+            if nickname in room.nicknames:
+                self.send(
+                    Protocols.Response.INVALID_REQUEST,
+                    "Nickname taken",
+                    client
+                )
+                return
 
             if len(room.round_indexes) >= 2:
                 self.send(
@@ -253,7 +262,7 @@ class Server:
             if len(room.round_indexes) == 2:
                 for c in room.round_indexes.keys():
                     self.send(Protocols.Response.GUESSES, room.guesses, c)
-                    self.send(Protocols.Response.SETTINGS, {  # Add this!
+                    self.send(Protocols.Response.SETTINGS, {
                         "mode": room.mode,
                         "max_guesses": room.max_guesses,
                         "rounds": room.rounds,

@@ -458,6 +458,7 @@ class Wordle:
         self.letter_number = 0
         self.round_start_time = time.time()
 
+        self.client.warning = ""
         self.warning_text = ""
 
         # reset keyboard colors
@@ -492,6 +493,7 @@ class Wordle:
         elif self.game_state == "waiting":
             self.draw_waiting(screen)
         elif self.game_state == "playing":
+            self.client.warning = ""
             self.draw_game(screen)
 
         if self.warning_text:
@@ -618,7 +620,12 @@ class Wordle:
                 "nickname": nickname
             })
 
-            self.game_state = "waiting"
+            print(self.client.warning)
+
+            if self.client.warning:
+                self.game_state = "join"
+            else:
+                self.game_state = "waiting"
 
     # handles the create screen - has input boxes for all settings +
     # nickname and creates room based on them
@@ -796,6 +803,8 @@ class Wordle:
         self.client.started = False
         self.client.new_round = False
 
+        self.client.warning = ""
+
         self.client.opponent_left = False
         self.client.winner = None
 
@@ -853,6 +862,10 @@ class Wordle:
                     return
 
                 self.handle_event(event)
+
+            if self.client.warning:
+                self.warning_text = self.client.warning
+                self.client.warning = ""
 
             self.draw(screen)
 

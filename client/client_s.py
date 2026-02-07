@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional
 from protocols import Protocols
 
 class Client:
-    def __init__(self, host: str = "127.0.0.1", port: int = 55555) -> None:
+    def __init__(self, host: str | None = None, port: int = 55555) -> None:
         self.server: socket.socket = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM
         )
@@ -31,6 +31,8 @@ class Client:
 
         self.new_round: bool = False
         self.opponent_left: bool = False
+
+        self.warning : str = ""
 
         self.max_guesses: int = 0
         self.longer_list: List[str] = []
@@ -140,6 +142,9 @@ class Client:
         # receives leaderboard data
         elif r_type == Protocols.Response.LEADERBOARD:
             self.leaderboard_data = data
+        # warning from server
+        elif r_type == Protocols.Response.INVALID_REQUEST:
+            self.warning = data
         # opponent has left
         elif r_type == Protocols.Response.OPPONENT_LEFT:
             self.opponent_left = True

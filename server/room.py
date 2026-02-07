@@ -20,6 +20,7 @@ class Room:
         self.round_indexes: Dict[Any, int] = {host: 0}
         self.points: Dict[Any, int] = {host: 0}
 
+        self.nicknames : List[str] = []
         self.finished_players: Set[Any] = set()
         self.failed_players: Set[Any] = set()
 
