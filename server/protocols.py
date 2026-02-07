@@ -14,6 +14,7 @@ class Protocols:
         NEW_ROUND: ClassVar[str] = "protocol.new_round"
         SETTINGS: ClassVar[str] = "protocol.settings"
         POINTS_UPDATE: ClassVar[str] = "protocol.points_update"
+        LEADERBOARD: ClassVar[str] = "protocol.leaderboard"
 
     class Request:
         ANSWER: ClassVar[str] = "protocol.answer"
@@ -21,3 +22,4 @@ class Protocols:
         LEAVE: ClassVar[str] = "protocol.leave"
         JOIN_GAME: ClassVar[str] = "protocol.join_game"
         CREATE_GAME: ClassVar[str] = "protocol.create_game"
+        GET_LEADERBOARD: ClassVar[str] = "protocol.get_leaderboard"

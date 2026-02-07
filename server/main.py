@@ -50,6 +50,8 @@ class Server:
             winner_client = max(room.points, key=room.points.get)
             winner_name = self.client_names[winner_client]
             
+            self.db.increase_wins(winner_name)
+
             for c in room.round_indexes.keys():
                 self.send(Protocols.Response.WINNER, winner_name, c)
             return
@@ -61,6 +63,8 @@ class Server:
             winner_client = max(room.points, key=room.points.get)
             winner_name = self.client_names[winner_client]
             
+            self.db.increase_wins(winner_name)
+
             for c in room.round_indexes.keys():
                 self.send(Protocols.Response.WINNER, winner_name, c)
             return
@@ -189,6 +193,9 @@ class Server:
                 remaining_client = list(room.round_indexes.keys())[0]
                 self.send(Protocols.Response.OPPONENT_LEFT, None, remaining_client)
 
+        elif r_type == Protocols.Request.GET_LEADERBOARD:
+            leaderboard_data = self.db.get_leaderboard(10)
+            self.send(Protocols.Response.LEADERBOARD, leaderboard_data, client)
         elif r_type == Protocols.Request.JOIN_GAME:
             room_code = data.get("room_code")
             nickname = data.get("nickname")

@@ -56,6 +56,29 @@ class DB:
         else:
             return {'wins': 0}
     
+    def get_leaderboard(self, limit=10):
+        """Get top players by number of wins"""
+        query = """
+        SELECT username, wins
+        FROM wins
+        WHERE wins >= 1  -- Only show players with at least 1 win
+        ORDER BY wins DESC
+        LIMIT %s;
+        """
+        try:
+            self.cursor.execute(query, (limit,))
+            results = self.cursor.fetchall()
+            return [
+                {
+                    'username': row[0],
+                    'wins': row[1]
+                }
+                for row in results
+            ]
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(f"Error fetching leaderboard: {error}")
+            return []
+
     def __del__(self):
         self.cursor.close()
         self.db.close()

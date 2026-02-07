@@ -37,13 +37,13 @@ class Button:
         self,
         rect: Tuple[int, int, int, int],
         text: str,
-        font: pygame.font.Font,
+        font: pygame.font.Font | None,
         bg_color: Tuple[int, int, int] = (200, 200, 200),
         text_color: Tuple[int, int, int] = (0, 0, 0)
     ) -> None:
         self.rect: pygame.Rect = pygame.Rect(rect)
         self.text: str = text
-        self.font: pygame.font.Font = font
+        self.font: pygame.font.Font | None = font
         self.bg_color: Tuple[int, int, int] = bg_color
         self.text_color: Tuple[int, int, int] = text_color
 
@@ -68,11 +68,11 @@ class InputBox:
     def __init__(
         self,
         rect: Tuple[int, int, int, int],
-        font: pygame.font.Font,
+        font: pygame.font.Font | None,
         text: str = ''
     ) -> None:
         self.rect: pygame.Rect = pygame.Rect(rect)
-        self.font: pygame.font.Font = font
+        self.font: pygame.font.Font | None = font
         self.text: str = text
         self.color_active: pygame.Color = pygame.Color('gray')
         self.color_inactive: pygame.Color = pygame.Color('black')
@@ -102,6 +102,8 @@ class InputBox:
 
     def draw(self, screen: pygame.Surface) -> None:
         pygame.draw.rect(screen, self.color, self.rect, 2)
+        if not self.font:
+            return
         text_surface: pygame.Surface = self.font.render(
             self.text, True, self.color
         )
@@ -116,7 +118,7 @@ class Wordle:
         self.room_code = None
         self.settings: Optional[Dict[str, Any]] = None
 
-        self.font = pygame.font.Font()
+        self.font : pygame.font.Font | None = None
         self.back_button = Button((20, 20, 150, 40), "Main Menu", self.font, bg_color=(200, 100, 100))
 
         self.round_active = False
@@ -213,10 +215,62 @@ class Wordle:
             self.font = pygame.font.SysFont("Arial", 30)
             self.startup_buttons = [
                 Button((200,200,200,50),"Join Game",self.font),
-                Button((200,300,200,50),"Create Game",self.font)
+                Button((200,300,200,50),"Create Game",self.font),
+                Button((200,400,200,50),"Leaderboard",self.font)
             ]
         for btn in self.startup_buttons:
             btn.draw(screen)
+
+    def draw_leaderboard(self, screen):
+        screen.fill((255, 255, 255))
+        
+        # Title
+        title_font = pygame.font.SysFont('Arial', 40, bold=True)
+        title = title_font.render("LEADERBOARD - Top 10 Players", True, (0, 0, 0))
+        screen.blit(title, (70, 70))
+        
+        # Column headers
+        header_font = pygame.font.SysFont('Arial', 28, bold=True)
+        headers = ["Rank", "Player", "Wins"]
+        x_positions = [100, 300, 450]
+        
+        for i, header in enumerate(headers):
+            header_surface = header_font.render(header, True, (50, 50, 150))
+            screen.blit(header_surface, (x_positions[i], 120))
+        
+        # Leaderboard data
+        data_font = pygame.font.SysFont('Arial', 24)
+        y_offset = 160
+        
+        # Use client's leaderboard data
+        leaderboard_data = self.client.leaderboard_data
+        
+        for idx, player in enumerate(leaderboard_data):
+            rank = idx + 1
+            username = player['username'][:15]  # Limit username length
+            wins = player['wins']
+            
+            # Alternate row colors
+            row_color = (240, 240, 240) if idx % 2 == 0 else (220, 220, 220)
+            pygame.draw.rect(screen, row_color, (100, y_offset, 440, 30))
+            
+            # Draw data
+            data_items = [str(rank), username, str(wins)]
+            
+            for i, item in enumerate(data_items):
+                text_surface = data_font.render(item, True, (0, 0, 0))
+                screen.blit(text_surface, (x_positions[i], y_offset))
+            
+            y_offset += 40
+        
+        # Back button
+        self.back_button.draw(screen)
+        
+        # No data message
+        if not leaderboard_data:
+            no_data_font = pygame.font.SysFont('Arial', 30)
+            no_data_text = no_data_font.render("No leaderboard data available", True, (150, 0, 0))
+            screen.blit(no_data_text, (180, 300))
 
     def draw_join_screen(self, screen):
         self.back_button = Button((20, 20, 150, 40), "Main Menu", pygame.font.SysFont('Arial', 25), bg_color=(200, 100, 100))
@@ -238,7 +292,7 @@ class Wordle:
     def draw_create_screen(self, screen):
         screen.fill((255,255,255))
         self.font = pygame.font.SysFont("Arial",30)
-        #self.back_button = Button((20, 20, 150, 40), "Main Menu", pygame.font.SysFont('Arial', 25), bg_color=(200, 100, 100))
+        self.back_button = Button((20, 20, 150, 40), "Main Menu", pygame.font.SysFont('Arial', 25), bg_color=(200, 100, 100))
         if not self.create_buttons:
             #label_x = 120
             box_x = 360
@@ -357,6 +411,8 @@ class Wordle:
             self.draw_join_screen(screen)
         elif self.game_state == "create":
             self.draw_create_screen(screen)
+        elif self.game_state == "leaderboard":
+            self.draw_leaderboard(screen)
         elif self.game_state == "waiting":
             self.draw_waiting(screen)
         elif self.game_state == "playing":
@@ -438,6 +494,8 @@ class Wordle:
             self.handle_event_join(event)
         elif self.game_state == "create":
             self.handle_event_create(event)
+        elif self.game_state == "leaderboard":
+            self.handle_event_leaderboard(event)
         elif self.game_state == "waiting":
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if hasattr(self, "back_button") and self.back_button.is_clicked(event.pos):
@@ -449,7 +507,16 @@ class Wordle:
         if event.type == pygame.MOUSEBUTTONDOWN:
             for btn in self.startup_buttons:
                 if btn.is_clicked(event.pos):
+                    if btn.text == "Leaderboard":
+                        self.game_state = "leaderboard"
+                        # Request leaderboard data from server
+                        self.client.send(Protocols.Request.GET_LEADERBOARD, {})
                     self.game_state = btn.text.lower().split()[0]
+
+    def handle_event_leaderboard(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.back_button.is_clicked(event.pos):
+                self.game_state = "startup"
 
     def handle_event_join(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:

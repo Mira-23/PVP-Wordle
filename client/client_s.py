@@ -35,6 +35,8 @@ class Client:
         self.max_guesses: int = 0
         self.longer_list: List[str] = []
 
+        self.leaderboard_data: List[Dict[str, Any]] = []
+
     # starts thread on receive
     def start(self) -> None:
         receive_thread = threading.Thread(target=self.receive)
@@ -135,6 +137,9 @@ class Client:
         # recieves winner
         elif r_type == Protocols.Response.WINNER:
             self.winner = data
+        # receives leaderboard data
+        elif r_type == Protocols.Response.LEADERBOARD:
+            self.leaderboard_data = data
         # opponent has left
         elif r_type == Protocols.Response.OPPONENT_LEFT:
             self.opponent_left = True
