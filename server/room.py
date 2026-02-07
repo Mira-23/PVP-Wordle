@@ -81,6 +81,9 @@ class Room:
         bonus_steps: int = max(0, 5 - int(seconds // 30))
         time_bonus: int = bonus_steps * 10
 
+        if guess_score == 0:
+            time_bonus = 0
+
         return guess_score + time_bonus
 
     # handles a finished player based on whether the mode is infinite or not
