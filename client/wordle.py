@@ -1,10 +1,15 @@
 import time
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 from typing import Optional
 import pygame
 from client_s import Client
 from protocols import Protocols
+
+from enum import Enum
+from typing import Tuple, Optional, Any, Union
+import pygame
+
 
 class CellColors(Enum):
     BLACK = (10, 10, 10)
@@ -13,50 +18,76 @@ class CellColors(Enum):
     GREEN = (0, 255, 0)
 
 class Cell:
-    def __init__(self, letter: Optional[pygame.Surface] = None, color=CellColors.WHITE,x=0,y=0, text=''):
-        self.letter = letter
-        self.color = color
-        self.x = x
-        self.y = y
-        self.text = text
+    def __init__(
+        self,
+        letter: Optional[pygame.Surface] = None,
+        color: CellColors = CellColors.WHITE,
+        x: int = 0,
+        y: int = 0,
+        text: str = ''
+    ) -> None:
+        self.letter: Optional[pygame.Surface] = letter
+        self.color: CellColors = color
+        self.x: int = x
+        self.y: int = y
+        self.text: str = text
 
 class Button:
-    def __init__(self, rect, text, font, bg_color=(200,200,200), text_color=(0,0,0)):
-        self.rect = pygame.Rect(rect)
-        self.text = text
-        self.font = font
-        self.bg_color = bg_color
-        self.text_color = text_color
+    def __init__(
+        self,
+        rect: Tuple[int, int, int, int],
+        text: str,
+        font: pygame.font.Font,
+        bg_color: Tuple[int, int, int] = (200, 200, 200),
+        text_color: Tuple[int, int, int] = (0, 0, 0)
+    ) -> None:
+        self.rect: pygame.Rect = pygame.Rect(rect)
+        self.text: str = text
+        self.font: pygame.font.Font = font
+        self.bg_color: Tuple[int, int, int] = bg_color
+        self.text_color: Tuple[int, int, int] = text_color
 
-    def draw(self, screen):
+    def draw(self, screen: pygame.Surface) -> None:
         pygame.draw.rect(screen, self.bg_color, self.rect)
-        text_surface = self.font.render(self.text, True, self.text_color)
-        screen.blit(
-            text_surface,
-            (self.rect.centerx - text_surface.get_width()/2, self.rect.centery - text_surface.get_height()/2)
-        )
+        if self.font is not None:  # Add check
+            text_surface: pygame.Surface = self.font.render(
+                self.text, True, self.text_color
+            )
+            screen.blit(
+                text_surface,
+                (
+                    self.rect.centerx - text_surface.get_width() / 2,
+                    self.rect.centery - text_surface.get_height() / 2
+                )
+            )
 
-    def is_clicked(self, mouse_pos):
+    def is_clicked(self, mouse_pos: Tuple[int, int]) -> bool:
         return self.rect.collidepoint(mouse_pos)
 
 class InputBox:
-    def __init__(self, rect, font, text=''):
-        self.rect = pygame.Rect(rect)
-        self.font = font
-        self.text = text
-        self.color_active = pygame.Color('gray')
-        self.color_inactive = pygame.Color('black')
-        self.color = self.color_inactive
-        self.active = False
-        self.hidden = False
-    
-    def toggle(self):
+    def __init__(
+        self,
+        rect: Tuple[int, int, int, int],
+        font: pygame.font.Font,
+        text: str = ''
+    ) -> None:
+        self.rect: pygame.Rect = pygame.Rect(rect)
+        self.font: pygame.font.Font = font
+        self.text: str = text
+        self.color_active: pygame.Color = pygame.Color('gray')
+        self.color_inactive: pygame.Color = pygame.Color('black')
+        self.color: Union[pygame.Color, Tuple[int, int, int]] = self.color_inactive
+        self.active: bool = False
+        self.hidden: bool = False
+
+    def toggle(self) -> None:
         if self.hidden:
-            self.color = (0,0,0)
-        else: self.color = (255,255,255)
+            self.color = (0, 0, 0)
+        else:
+            self.color = (255, 255, 255)
         self.hidden = not self.hidden
 
-    def handle_event(self, event):
+    def handle_event(self, event: pygame.event.Event) -> Optional[str]:
         if event.type == pygame.MOUSEBUTTONDOWN and not self.hidden:
             self.active = self.rect.collidepoint(event.pos)
             self.color = self.color_active if self.active else self.color_inactive
@@ -69,10 +100,12 @@ class InputBox:
                 self.text += event.unicode
         return None
 
-    def draw(self, screen):
+    def draw(self, screen: pygame.Surface) -> None:
         pygame.draw.rect(screen, self.color, self.rect, 2)
-        text_surface = self.font.render(self.text, True, self.color)
-        screen.blit(text_surface, (self.rect.x+5, self.rect.y+5))
+        text_surface: pygame.Surface = self.font.render(
+            self.text, True, self.color
+        )
+        screen.blit(text_surface, (self.rect.x + 5, self.rect.y + 5))
 
 class Wordle:
     def __init__(self,client):
@@ -83,7 +116,7 @@ class Wordle:
         self.room_code = None
         self.settings: Optional[Dict[str, Any]] = None
 
-        self.font = None
+        self.font = pygame.font.Font()
         self.back_button = Button((20, 20, 150, 40), "Main Menu", self.font, bg_color=(200, 100, 100))
 
         self.round_active = False

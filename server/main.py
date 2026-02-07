@@ -5,6 +5,7 @@ import json
 from typing import Any, Dict
 from protocols import Protocols
 from room import Room 
+from db import DB
 
 class Server:
     def __init__(self, host="127.0.0.1",port=55555):
@@ -19,6 +20,8 @@ class Server:
         self.rooms_by_code = {}      # room_code -> Room
         self.client_to_room = {}     # client -> Room
 
+        self.db = DB()
+
     def handle(self, client):
         print("Client connected.")
         while True:
@@ -26,21 +29,18 @@ class Server:
                 data = client.recv(1024).decode("ascii")
                 if not data:
                     break
-
                 message = json.loads(data)
                 self.handle_receive(message, client)
-
             except:
                 break
-        
         try:
-                self.send_to_opponent(
-                    Protocols.Response.OPPONENT_LEFT,
-                    None,
-                    client
-                )
+            self.send_to_opponent(
+                Protocols.Response.OPPONENT_LEFT,
+                None,
+                client
+            )
         except:
-                pass  # opponent already disconnected
+            pass  # opponent already disconnected
 
     def start_new_round_for_room(self, room):
         if len(room.finished_players) < 2:
