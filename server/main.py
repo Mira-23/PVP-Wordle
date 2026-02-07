@@ -4,7 +4,6 @@ import threading
 import json
 from typing import Any, Dict
 from protocols import Protocols
-import time # may not need
 from room import Room 
 
 class Server:
@@ -41,15 +40,13 @@ class Server:
                     client
                 )
         except:
-                pass  # Opponent already disconnected
+                pass  # opponent already disconnected
 
     def start_new_round_for_room(self, room):
         if len(room.finished_players) < 2:
             return
 
-        # INFINITE MODE: Check if both failed
-        if room.is_infinite and hasattr(room, 'failed_players') and len(room.failed_players) == 2:
-            # Both failed in infinite mode - GAME ENDS
+        if room.is_infinite and len(room.failed_players) == 2:
             winner_client = max(room.points, key=room.points.get)
             winner_name = self.client_names[winner_client]
             
@@ -57,11 +54,9 @@ class Server:
                 self.send(Protocols.Response.WINNER, winner_name, c)
             return
         
-        # NON-INFINITE MODE: Decrement rounds
         if not room.is_infinite:
             room.rounds -= 1
         
-        # Check if non-infinite game should end
         if room.rounds <= 0 and not room.is_infinite:
             winner_client = max(room.points, key=room.points.get)
             winner_name = self.client_names[winner_client]
@@ -70,7 +65,6 @@ class Server:
                 self.send(Protocols.Response.WINNER, winner_name, c)
             return
         
-        # For infinite mode that's continuing, add new word
         if room.is_infinite:
             random_word = room.chosen_list[random.randint(0, len(room.chosen_list)-1)]
             letters = list(random_word)
@@ -78,7 +72,6 @@ class Server:
             for c in room.round_indexes.keys():
                 self.send(Protocols.Response.GUESSES, room.guesses, c)
         
-        # Advance all players to next round
         for client in room.round_indexes.keys():
             opponent_client = self.opponent.get(client)
             if opponent_client:
@@ -92,10 +85,8 @@ class Server:
                 room.round_indexes[client] += 1
             self.send(Protocols.Response.NEW_ROUND, None, client)
         
-        # Reset for next round
         room.finished_players.clear()
-        if hasattr(room, 'failed_players'):
-            room.failed_players.clear()
+        room.failed_players.clear()
 
     def handle_receive(self, message, client):
         r_type = message.get("type")
@@ -219,7 +210,6 @@ class Server:
             first_client = [c for c in room.round_indexes.keys() if c != second_client][0]
             self.opponent[first_client] = second_client
             self.opponent[second_client] = first_client
-
             
             self.client_to_room[second_client] = room
             self.client_to_room[first_client] = room
@@ -251,7 +241,6 @@ class Server:
         try:
                 client.send(message_str.encode("ascii"))
         except (ConnectionResetError, BrokenPipeError):
-            # Client disconnected, ignore the error
             pass
 
     def send_to_opponent(self, r_type, data, client): 

@@ -1,27 +1,32 @@
 from pathlib import Path
 import random
-from typing import List
+from typing import List, Dict, Set, Any, Optional
+
 class Room:
-    def __init__(self, host, settings):
-        self.host = host
-        self.guest = None   # second player later
+    def __init__(self, host: Any, settings: Dict[str, Any]) -> None:
+        self.host: Any = host
+        self.guest: Optional[Any] = None   # second player later
 
-        self.mode = settings["mode"]
-        self.rounds = settings["rounds"]
-        self.is_infinite = settings["infinite"]
-        self.max_guesses = settings["max_guesses"]
+        self.mode: int = settings["mode"]
+        self.rounds: int = settings["rounds"]
+        self.is_infinite: bool = settings["infinite"]
+        self.max_guesses: int = settings["max_guesses"]
 
-        self.chosen_list = self.mode_choice()
-        self.guesses: List[List[str]] = self.generate_guesses(self.chosen_list)
+        self.chosen_list: List[str] = self.mode_choice()
+        self.guesses: List[List[str]] = self.generate_guesses(
+            self.chosen_list
+        )
 
-        self.round_indexes = {host: 0}
-        self.points = {host: 0}
+        self.round_indexes: Dict[Any, int] = {host: 0}
+        self.points: Dict[Any, int] = {host: 0}
 
-        self.finished_players = set()
+        self.finished_players: Set[Any] = set()
+        self.failed_players: Set[Any] = set()
 
-    def add_player(self, client):
+    # adds player to room unless full
+    def add_player(self, client: Any) -> bool:
         if self.guest is not None:
-            return False  # room full
+            return False
 
         self.guest = client
         self.round_indexes[client] = 0
@@ -30,25 +35,31 @@ class Room:
 
     # generates random words to be guessed based on the amount of rounds
     def generate_guesses(self, chosen_list: List[str]) -> List[List[str]]:
-        guesses = []
-        for i in range(self.rounds):
-            random_word = chosen_list[random.randint(0, len(chosen_list)-1)]
-            letters = list(random_word)
-            guesses.append(letters)
-        return guesses
-    
-    # loads a set of words based on the chosen mode for the random word generation
+        return [
+            list(chosen_list[random.randint(0, len(chosen_list) - 1)])
+            for _ in range(self.rounds)
+        ]
+
+    # loads a set of words based on the chosen mode for the random word
+    # generation
     def mode_choice(self) -> List[str]:
-        BASE_DIR = Path(__file__).resolve().parent.parent
+        base_dir: Path = Path(__file__).resolve().parent.parent
+        word_lists_dir = base_dir / "client" / "word lists"
 
-        with open(BASE_DIR / "client" / "word lists" / "fiveletterwords.txt", 'r') as file:
-            five_letter_words = file.read().splitlines()
-        with open(BASE_DIR / "client" / "word lists" / "sixletterwords.txt", 'r') as file:
-            six_letter_words = file.read().splitlines()
-        with open(BASE_DIR / "client" / "word lists" / "sevenletterwords.txt", 'r') as file:
-            seven_letter_words = file.read().splitlines()
+        with open(
+            word_lists_dir / "fiveletterwords.txt", 'r', encoding='utf-8'
+            ) as file:
+            five_letter_words: List[str] = file.read().splitlines()
+        with open(
+            word_lists_dir / "sixletterwords.txt", 'r', encoding='utf-8'
+            ) as file:
+            six_letter_words: List[str] = file.read().splitlines()
+        with open(
+            word_lists_dir / "sevenletterwords.txt", 'r', encoding='utf-8'
+            ) as file:
+            seven_letter_words: List[str] = file.read().splitlines()
 
-        chosen_list = []
+        chosen_list: List[str] = []
         match self.mode:
             case 5:
                 chosen_list = five_letter_words
@@ -58,48 +69,32 @@ class Room:
                 chosen_list = seven_letter_words
             case _:
                 pass
-            
+
         return chosen_list
 
     # calculates points based on the amount of guesses and time taken
-    # max guesses - player guesses)*10 + extra points (50 for 30 seconds, 40 for 1 minute... etc)
+    # max guesses - player guesses)*10 + extra points (50 for 30 seconds,
+    # 40 for 1 minute... etc)
     def calculate_points(self, guesses_used: int, seconds: float) -> int:
-        guess_score = max(0, (self.max_guesses - guesses_used) * 10)
+        guess_score: int = max(0, (self.max_guesses - guesses_used) * 10)
 
-        bonus_steps = max(0, 5 - int(seconds // 30))
-        time_bonus = bonus_steps * 10
+        bonus_steps: int = max(0, 5 - int(seconds // 30))
+        time_bonus: int = bonus_steps * 10
 
         return guess_score + time_bonus
 
-    # triggered when a player finishes a round, calculates points and prepares for new round
-    # def client_finished(self, client, data):
-    #     guesses_used = data.get("guesses_used", self.max_guesses)
-    #     seconds_taken = data.get("seconds", 999)
+    # handles a finished player based on whether the mode is infinite or not
+    def client_finished(self, client: Any, data: Dict[str, Any]) -> None:
+        guesses_used: int = data.get("guesses_used", self.max_guesses)
+        seconds_taken: float = data.get("seconds", 999)
+        success: bool = data.get("success", False)
 
-    #     points = self.calculate_points(guesses_used, seconds_taken)
-
-    #     self.points[client] += points
-
-    #     self.round_indexes[client] += 1
-    #     self.finished_players.add(client)
-
-    def client_finished(self, client, data):
-        guesses_used = data.get("guesses_used", self.max_guesses)
-        seconds_taken = data.get("seconds", 999)
-        success = data.get("success", False)
-        
-        points = self.calculate_points(guesses_used, seconds_taken)
+        points: int = self.calculate_points(guesses_used, seconds_taken)
         self.points[client] += points
-        
+
         if success:
-            # Successful guess - advance to next round
             self.round_indexes[client] += 1
         else:
-            # Failed guess - track for infinite mode game end check
-            if not hasattr(self, 'failed_players'):
-                self.failed_players = set()
             self.failed_players.add(client)
-            # In non-infinite mode, player still advances (handled in start_new_round_for_room)
-            # In infinite mode, player does NOT advance
-        
+
         self.finished_players.add(client)

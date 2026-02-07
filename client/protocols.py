@@ -1,21 +1,23 @@
+from typing import ClassVar
+
 class Protocols:
     class Response:
-        NICKNAME = "protocol.request_nickname"
-        GUESSES = "protocol.guesses"
-        START = "protocol.start"
-        OPPONENT = "protocol.opponent"
-        OPPONENT_ADVANCE = 'protocol.opponent_advance'
-        ANSWER_VALID = "protocol.answer_valid"
-        INVALID_REQUEST = 'protocol.invalid_request'
-        WINNER = "protocol.winner"
-        OPPONENT_LEFT = "protocol.opponent_left"
-        NEW_ROUND = "protocol.new_round"
-        SETTINGS = "protocol.settings"
-        POINTS_UPDATE = "protocol.points_update"
+        NICKNAME: ClassVar[str] = "protocol.request_nickname"
+        GUESSES: ClassVar[str] = "protocol.guesses"
+        START: ClassVar[str] = "protocol.start"
+        OPPONENT: ClassVar[str] = "protocol.opponent"
+        OPPONENT_ADVANCE: ClassVar[str] = "protocol.opponent_advance"
+        ANSWER_VALID: ClassVar[str] = "protocol.answer_valid"
+        INVALID_REQUEST: ClassVar[str] = "protocol.invalid_request"
+        WINNER: ClassVar[str] = "protocol.winner"
+        OPPONENT_LEFT: ClassVar[str] = "protocol.opponent_left"
+        NEW_ROUND: ClassVar[str] = "protocol.new_round"
+        SETTINGS: ClassVar[str] = "protocol.settings"
+        POINTS_UPDATE: ClassVar[str] = "protocol.points_update"
 
     class Request:
-        ANSWER = "protocol.answer"
-        NICKNAME = "protocol.send_nickname"
-        LEAVE = "protocol.leave"
-        JOIN_GAME = "protocol.join_game"
-        CREATE_GAME = "protocol.create_game"
+        ANSWER: ClassVar[str] = "protocol.answer"
+        NICKNAME: ClassVar[str] = "protocol.send_nickname"
+        LEAVE: ClassVar[str] = "protocol.leave"
+        JOIN_GAME: ClassVar[str] = "protocol.join_game"
+        CREATE_GAME: ClassVar[str] = "protocol.create_game"

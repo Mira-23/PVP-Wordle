@@ -1,8 +1,8 @@
-import pygame
 import time
 from enum import Enum
 from typing import Any, Dict, List
 from typing import Optional
+import pygame
 from client_s import Client
 from protocols import Protocols
 
@@ -63,7 +63,7 @@ class InputBox:
         elif event.type == pygame.KEYDOWN and self.active:
             if event.key == pygame.K_RETURN:
                 return self.text
-            elif event.key == pygame.K_BACKSPACE:
+            if event.key == pygame.K_BACKSPACE:
                 self.text = self.text[:-1]
             else:
                 self.text += event.unicode
@@ -84,16 +84,12 @@ class Wordle:
         self.settings: Optional[Dict[str, Any]] = None
 
         self.font = None
+        self.back_button = Button((20, 20, 150, 40), "Main Menu", self.font, bg_color=(200, 100, 100))
 
         self.round_active = False
         self.mode = 5
         self.amount_of_guesses = 6
 
-        self.color_active = pygame.Color("gray")
-        self.color_inactive = pygame.Color("black")
-        self.color = self.color_inactive
-        self.input_box = pygame.Rect(100,100,400,32)
-        self.text = ""
         self.board = []
 
         self.round_start_time = time.time()
@@ -106,8 +102,12 @@ class Wordle:
 
         self.startup_buttons = []
         self.create_buttons = {}
-        self.join_input_box = None
         self.create_input_boxes = {}
+
+        self.join_input_box = None
+        self.join_nickname_box = InputBox((150,250,300,50), self.font)
+        self.join_nickname_text = None
+        self.join_info_text = None
 
         self.nickname = ""
 
@@ -126,7 +126,7 @@ class Wordle:
         }
 
     def draw_keyboard(self, screen):
-        # Keyboard layout (QWERTY)
+        # keyboard layout (QWERTY)
         keyboard_rows = [
             ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
             ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
@@ -135,10 +135,10 @@ class Wordle:
         
         key_size = 40
         key_spacing = 5
-        start_y = 500  # Bottom of screen
+        start_y = 500
         
         for row_idx, row in enumerate(keyboard_rows):
-            # Calculate row width to center it
+
             row_width = len(row) * (key_size + key_spacing) - key_spacing
             start_x = (640 - row_width) // 2
             
@@ -146,10 +146,9 @@ class Wordle:
                 key_x = start_x + col_idx * (key_size + key_spacing)
                 key_y = start_y + row_idx * (key_size + key_spacing + 5)
                 
-                # Get color for this key
                 key_color = self.keyboard_letters.get(letter, CellColors.WHITE)
                 
-                # Draw key background
+                # draw key background
                 pygame.draw.rect(
                     screen, 
                     key_color.value, 
@@ -157,7 +156,7 @@ class Wordle:
                     border_radius=4
                 )
                 
-                # Draw key border
+                # draw key border
                 pygame.draw.rect(
                     screen,
                     (50, 50, 50),
@@ -166,7 +165,7 @@ class Wordle:
                     border_radius=4
                 )
                 
-                # Draw letter
+                # draw letter
                 font = pygame.font.SysFont('Arial', 20, bold=True)
                 text_color = (255, 255, 255) if key_color in [CellColors.BLACK, CellColors.GREEN] else (0, 0, 0)
                 letter_surface = font.render(letter, True, text_color)
@@ -206,7 +205,7 @@ class Wordle:
     def draw_create_screen(self, screen):
         screen.fill((255,255,255))
         self.font = pygame.font.SysFont("Arial",30)
-        self.back_button = Button((20, 20, 150, 40), "Main Menu", pygame.font.SysFont('Arial', 25), bg_color=(200, 100, 100))
+        #self.back_button = Button((20, 20, 150, 40), "Main Menu", pygame.font.SysFont('Arial', 25), bg_color=(200, 100, 100))
         if not self.create_buttons:
             #label_x = 120
             box_x = 360
@@ -253,39 +252,35 @@ class Wordle:
         screen.blit(text_surface, (screen.get_width()/2 - text_surface.get_width()/2, screen.get_height()/2 - text_surface.get_height()/2))
 
     def draw_score(self, screen):
-        # Set up fonts
         score_font = pygame.font.SysFont('Arial', 24)
         title_font = pygame.font.SysFont('Arial', 28, bold=True)
         
-        # Score box position (right side of screen)
+        # score box position
         score_box_x = 20
         score_box_y = 150
         box_width = 140
         box_height = 120
         
-        # Draw score box background
+        # draw score box background
         pygame.draw.rect(screen, (240, 240, 240), (score_box_x, score_box_y, box_width, box_height))
         pygame.draw.rect(screen, (100, 100, 100), (score_box_x, score_box_y, box_width, box_height), 2)
         
-        # Draw title
+        # draw title
         title = title_font.render("SCORE", True, (0, 0, 0))
         screen.blit(title, (score_box_x + (box_width - title.get_width()) // 2, score_box_y + 10))
         
-        # Draw player score (you)
+        # draw player score
         player_score = score_font.render(f"You: {self.client.points}", True, (0, 100, 0))
         screen.blit(player_score, (score_box_x + 20, score_box_y + 50))
         
-        # Draw opponent score (if opponent exists)
+        # draw opponent score (if opponent exists)
         if self.client.opponent_name:
-            # We need to get opponent's points - but we don't have them!
-            # Let's assume we have opponent_points attribute in client
-            if hasattr(self.client, 'opponent_points'):
-                opponent_score = score_font.render(f"{self.client.opponent_name}: {self.client.opponent_points}", True, (200, 0, 0))
-                screen.blit(opponent_score, (score_box_x + 20, score_box_y + 80))
-            else:
-                # Show opponent name without points if we don't have their points
-                opponent_name = score_font.render(f"{self.client.opponent_name}: ?", True, (200, 0, 0))
-                screen.blit(opponent_name, (score_box_x + 20, score_box_y + 80))
+            opponent_score = score_font.render(
+                f"{self.client.opponent_name}: {self.client.opponent_points}", 
+                True, 
+                (200, 0, 0)
+            )
+            screen.blit(opponent_score, (score_box_x + 20, score_box_y + 80))
 
     def draw_game(self,screen):
         cell_size = 50
@@ -342,7 +337,7 @@ class Wordle:
         guess_letters = list(guess)
         letters = list(word.upper())
 
-            # Track letter statuses for this guess
+        # Track letter statuses for this guess
         letter_status = {}  # letter -> best status found
         
         # First pass: mark correct positions (green)
@@ -390,8 +385,7 @@ class Wordle:
                         to_be_guessed.append(guess_letters[index])
 
                     to_be_guessed.remove(guess_letters[index])
-                    color = CellColors.GREEN
-                        
+                    color = CellColors.GREEN  
                 elif guess_letters[index] in to_be_guessed:
                     to_be_guessed.remove(guess_letters[index])
                     color = CellColors.YELLOW
@@ -412,7 +406,6 @@ class Wordle:
         elif self.game_state == "create":
             self.handle_event_create(event)
         elif self.game_state == "waiting":
-            # allow main menu button if needed
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if hasattr(self, "back_button") and self.back_button.is_clicked(event.pos):
                     self.return_to_main_menu()
@@ -573,14 +566,11 @@ class Wordle:
 
     # resets game variables
     def return_to_main_menu(self):
-        
         self.game_state = "startup"
         self.round_active = False
         self.reset_board()
         
         self.nickname = ""
-        self.pending_join_code = None
-        self.pending_settings = None
         
         self.client.started = False
         self.client.new_round = False
@@ -590,7 +580,6 @@ class Wordle:
 
     def handle_end(self, screen):
         self.font = pygame.font.SysFont('Arial', 30)
-        self.back_button = Button((20, 20, 150, 40), "Main Menu", pygame.font.SysFont('Arial', 25), bg_color=(200, 100, 100))
 
         run = True
         while run:
@@ -615,7 +604,7 @@ class Wordle:
                     self.client.close()
                     pygame.quit()
                     return
-                elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.type == pygame.MOUSEBUTTONDOWN:
                     if self.back_button.is_clicked(event.pos):
                         self.client.send(Protocols.Request.LEAVE, {})
 
@@ -639,8 +628,8 @@ class Wordle:
                     self.client.close()
                     pygame.quit()
                     return
-                else:
-                    self.handle_event(event)
+
+                self.handle_event(event)
 
             self.draw(screen)
 
