@@ -1,12 +1,17 @@
+import os
 from pathlib import Path
 import socket
+import sys
 import threading
 import json
 from typing import List, Dict, Any, Optional
 from protocols import Protocols
 
 class Client:
-    def __init__(self, host: str | None = None, port: int = 55555) -> None:
+    def __init__(self, host: str | None = None, port: int | None = None) -> None:
+        if host is None and port is None:
+            host = input("Enter server IP address: ")
+            port = int(input("Enter port: "))
         self.server: socket.socket = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM
         )
@@ -72,6 +77,19 @@ class Client:
 
     # based on the chosen word length fetch the list for word verification
     def mode_choice(self) -> List[str]:
+        if getattr(sys, 'frozen', False):
+            # Running as compiled executable
+            base_dir_str: str = os.path.dirname(sys.executable)
+            base_dir: Path = Path(base_dir_str)
+        else:
+            # Running as script
+            base_dir : Path = Path(__file__).resolve().parent
+        
+        word_lists_dir : Path = Path(base_dir) / "word lists"
+        
+        if not word_lists_dir.exists():
+            word_lists_dir = Path(base_dir) / ".." / "word lists"
+
         base_dir: Path = Path(__file__).resolve().parent
         word_lists_dir: Path = base_dir / "word lists"
 

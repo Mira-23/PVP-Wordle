@@ -662,18 +662,18 @@ class Wordle:
             send_create = False
 
         if send_create:
-            nickname = self.create_input_boxes["nickname"].text.strip()
+            nickname = self.create_input_boxes["nickname"].text.strip()[:15]
             c_mode = self.create_input_boxes["mode"].text
             c_attempts = self.create_input_boxes["attempts"].text
             c_rounds = self.create_input_boxes["rounds"].text
-            c_room_code = self.create_input_boxes["room_code"].text.strip()
+            c_room_code = self.create_input_boxes["room_code"].text.strip()[:4]
 
             is_mode_valid = c_mode.isdigit() and int(c_mode) in range(5, 8)
             is_attempts_valid = (
                 is_mode_valid and c_attempts.isdigit()
                 and int(c_attempts) in range(2, int(c_mode) + 2)
             )
-            is_rounds_valid = c_rounds.isdigit()
+            is_rounds_valid = c_rounds.isdigit() and int(c_rounds)>0
 
             are_inputs_invalid = (
                 not nickname or not c_room_code or not is_rounds_valid
@@ -807,6 +807,11 @@ class Wordle:
 
         self.client.opponent_left = False
         self.client.winner = None
+
+        self.client.current_round_index = 0
+        self.client.guesses = []
+        self.client.points = 0
+        self.client.opponent_points = 0
 
     # handles the end state for the game
     def handle_end(self, screen: pygame.Surface) -> None:

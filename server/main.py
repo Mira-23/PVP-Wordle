@@ -9,7 +9,7 @@ from db import DB
 
 
 class Server:
-    def __init__(self, host: str = "127.0.0.1", port: int = 55555) -> None:
+    def __init__(self, host: str = "0.0.0.0", port: int = 55555) -> None:
         self.host = host
         self.port = port
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -18,8 +18,8 @@ class Server:
 
         self.client_names: Dict[socket.socket, str] = {}
         self.opponent: Dict[socket.socket, socket.socket] = {}
-        self.rooms_by_code: Dict[str, Room] = {}      # room_code -> Room
-        self.client_to_room: Dict[socket.socket, Room] = {}     # client -> Room
+        self.rooms_by_code: Dict[str, Room] = {}
+        self.client_to_room: Dict[socket.socket, Room] = {}
 
         self.db = DB()
 
@@ -48,11 +48,17 @@ class Server:
             return
 
         if room.is_infinite and len(room.failed_players) == 2:
-            if room.points:  # Check if points dict is not empty
+            if room.points:
+
                 winner_client = max(room.points.keys(), key=lambda k: room.points.get(k, 0))
                 winner_name = self.client_names[winner_client]
 
-                self.db.increase_wins(winner_name)
+                if len(set(room.points.values())) == 1:
+                    winner_name = "everyone"
+                    for client in room.points.keys():
+                        self.db.increase_wins(self.client_names[client])
+                else:
+                    self.db.increase_wins(winner_name)
 
                 for c in room.round_indexes.keys():
                     self.send(Protocols.Response.WINNER, winner_name, c)
@@ -62,7 +68,7 @@ class Server:
             room.rounds -= 1
 
         if room.rounds <= 0 and not room.is_infinite:
-            if room.points:  # Check if points dict is not empty
+            if room.points:
                 winner_client = max(room.points.keys(), key=lambda k: room.points.get(k, 0))
                 winner_name = self.client_names[winner_client]
 
@@ -206,7 +212,7 @@ class Server:
                 self.send(Protocols.Response.OPPONENT_LEFT, None, remaining_client)
 
         elif r_type == Protocols.Request.GET_LEADERBOARD:
-            leaderboard_data = self.db.get_leaderboard(10)
+            leaderboard_data = self.db.get_leaderboard()
             self.send(Protocols.Response.LEADERBOARD, leaderboard_data, client)
         elif r_type == Protocols.Request.JOIN_GAME:
             if not isinstance(data, dict):
