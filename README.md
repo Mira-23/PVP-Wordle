@@ -2,8 +2,8 @@
 A variation of wordle created using python
 
 How to use:
-1. Launch server (either the exe or from server/main.py from the github repo)
-2. Launch 2 clients (for testing only - just on one device)
+1. Launch server (either the exe in dist/ or from server/main.py from the github repo)
+2. Launch 2 clients (either from the exe in dist or from client/wordle.py, for testing only - just on one device)
 3. Play!
 
 Notes:
