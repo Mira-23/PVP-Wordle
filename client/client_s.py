@@ -8,7 +8,8 @@ from typing import List, Dict, Any, Optional
 from protocols import Protocols
 
 class Client:
-    def __init__(self, host: str | None = None, port: int | None = None) -> None:
+    def __init__(self, host: str | None = "localhost", port: int | None = 55555) -> None:
+        # manual server overdrive for hosting with another service
         if host is None and port is None:
             host = input("Enter server IP address: ")
             port = int(input("Enter port: "))
@@ -78,11 +79,11 @@ class Client:
     # based on the chosen word length fetch the list for word verification
     def mode_choice(self) -> List[str]:
         if getattr(sys, 'frozen', False):
-            # Running as compiled executable
+            # running as compiled executable
             base_dir_str: str = os.path.dirname(sys.executable)
             base_dir: Path = Path(base_dir_str)
         else:
-            # Running as script
+            # running as script
             base_dir : Path = Path(__file__).resolve().parent
         
         word_lists_dir : Path = Path(base_dir) / "word lists"
@@ -132,7 +133,6 @@ class Client:
         data: Any = response.get("data")
 
         if r_type == Protocols.Response.START:
-            print("Received START from server")
             self.started = True
         # receive words to be guessed from server
         elif r_type == Protocols.Response.GUESSES:

@@ -5,7 +5,7 @@ from typing import List, Dict, Set, Any, Optional
 class Room:
     def __init__(self, host: Any, settings: Dict[str, Any]) -> None:
         self.host: Any = host
-        self.guest: Optional[Any] = None   # second player later
+        self.guest: Optional[Any] = None
 
         self.mode: int = settings["mode"]
         self.rounds: int = settings["rounds"]
@@ -44,6 +44,9 @@ class Room:
     # loads a set of words based on the chosen mode for the random word
     # generation
     def mode_choice(self) -> List[str]:
+        #change to the following when compiling
+        # base_dir: Path = Path(__file__).resolve().parent
+        # word_lists_dir = base_dir / "word lists"
         base_dir: Path = Path(__file__).resolve().parent.parent
         word_lists_dir = base_dir / "client" / "word lists"
 

@@ -67,7 +67,8 @@ class InputBox:
         self,
         rect: Tuple[int, int, int, int],
         font: Optional[pygame.font.Font],
-        text: str = ''
+        text: str = '',
+        max_length: int =13
     ) -> None:
         self.rect: pygame.Rect = pygame.Rect(rect)
         self.font: Optional[pygame.font.Font] = font
@@ -77,6 +78,7 @@ class InputBox:
         self.color: Union[pygame.Color, Tuple[int, int, int]] = self.color_inactive
         self.active: bool = False
         self.hidden: bool = False
+        self.max_length: int = max_length
 
     def toggle(self) -> None:
         if self.hidden:
@@ -94,8 +96,8 @@ class InputBox:
                 return self.text
             if event.key == pygame.K_BACKSPACE:
                 self.text = self.text[:-1]
-            else:
-                self.text += event.unicode
+            elif self.max_length == -1 or len(self.text) < self.max_length:
+                            self.text += event.unicode
         return None
 
     def draw(self, screen: pygame.Surface) -> None:
@@ -299,7 +301,7 @@ class Wordle:
             self.join_nickname_text = self.font.render(
                 "Enter your nickname:", True, (0, 0, 0)
             )
-            self.join_input_box = InputBox((150, 350, 300, 50), self.font)
+            self.join_input_box = InputBox((150, 350, 300, 50), self.font, max_length=4)
             self.join_info_text = self.font.render(
                 "Enter room code to join:", True, (0, 0, 0)
             )
@@ -330,13 +332,13 @@ class Wordle:
             self.create_input_boxes = {
                 "nickname": InputBox((box_x, start_y, 200, 40), self.font, text=''),
                 "mode": InputBox((box_x, start_y + step, 100, 40), self.font,
-                                 text=str(self.mode)),
+                                 text=str(self.mode),max_length=1),
                 "attempts": InputBox((box_x, start_y + 2 * step, 100, 40), self.font,
-                                     text=str(self.amount_of_guesses)),
+                                     text=str(self.amount_of_guesses),max_length=1),
                 "rounds": InputBox((box_x, start_y + 3 * step, 100, 40), self.font,
-                                   text='5'),
+                                   text='5',max_length=3),
                 "room_code": InputBox((box_x, start_y + 4 * step, 100, 40), self.font,
-                                      text='ABCD'),
+                                      text='ABCD',max_length=4),
             }
             self.create_buttons = {
                 "infinite": Button(
@@ -620,8 +622,6 @@ class Wordle:
                 "nickname": nickname
             })
 
-            print(self.client.warning)
-
             if self.client.warning:
                 self.game_state = "join"
             else:
@@ -741,7 +741,6 @@ class Wordle:
                         ''.join(chosen_word)
                     ):
                         self.warning_text = "You guessed it right!"
-                        print(f"You guessed it right! - {chosen_word}")
                         guess_str = ''.join(self.guess_list[self.word_number])
                         seconds_taken = time.time() - self.round_start_time
 
@@ -753,7 +752,6 @@ class Wordle:
                         }
 
                         self.client.send(Protocols.Request.ANSWER, payload)
-                        print(self.client.new_round)
 
                     else:
                         self.word_number += 1
@@ -774,7 +772,6 @@ class Wordle:
                                 f"You didn't guess it! "
                                 f"The word was {''.join(chosen_word)}"
                             )
-                            print(self.client.new_round)
 
                     self.letter_number = 0
 
@@ -816,7 +813,7 @@ class Wordle:
     # handles the end state for the game
     def handle_end(self, screen: pygame.Surface) -> None:
         self.font = pygame.font.SysFont('Arial', 30)
-
+        
         run = True
         while run:
             if self.client.winner:

@@ -23,6 +23,7 @@ class Server:
 
         self.db = DB()
 
+    # main handle function
     def handle(self, client: socket.socket) -> None:
         print("Client connected.")
         while True:
@@ -43,22 +44,18 @@ class Server:
         except Exception:
             pass  # opponent already disconnected
 
+    # begins new round
     def start_new_round_for_room(self, room: Room) -> None:
         if len(room.finished_players) < 2:
             return
 
         if room.is_infinite and len(room.failed_players) == 2:
             if room.points:
-
+                
                 winner_client = max(room.points.keys(), key=lambda k: room.points.get(k, 0))
                 winner_name = self.client_names[winner_client]
 
-                if len(set(room.points.values())) == 1:
-                    winner_name = "everyone"
-                    for client in room.points.keys():
-                        self.db.increase_wins(self.client_names[client])
-                else:
-                    self.db.increase_wins(winner_name)
+                self.db.increase_wins(winner_name)
 
                 for c in room.round_indexes.keys():
                     self.send(Protocols.Response.WINNER, winner_name, c)
@@ -103,6 +100,7 @@ class Server:
         room.finished_players.clear()
         room.failed_players.clear()
 
+    # handles client requests and sends responses
     def handle_receive(self, message: Dict[str, Any], client: socket.socket) -> None:
         r_type = message.get("type")
         data = message.get("data")
@@ -160,7 +158,6 @@ class Server:
                 if opponent else 0
             }, client)
 
-            # Also send to opponent if they exist
             if opponent:
                 self.send(Protocols.Response.POINTS_UPDATE, {
                     "your_points": room.points.get(opponent, 0),
@@ -284,6 +281,7 @@ class Server:
                         }, c)
                     self.send(Protocols.Response.START, None, c)
 
+    # send function
     def send(
         self,
         r_type: Union[Protocols.Response, str],
@@ -297,6 +295,7 @@ class Server:
         except (ConnectionResetError, BrokenPipeError):
             pass
 
+    # sends to opponent
     def send_to_opponent(
         self,
         r_type: Union[Protocols.Response, str],
@@ -308,10 +307,11 @@ class Server:
             return
         self.send(r_type, data, opponent)
 
+    # recieves
     def receive(self) -> None:
         while True:
             client, address = self.server.accept()
-            print(f"Connected with {str(address)}")
+            print(f"Connected on the address")
             thread = threading.Thread(target=self.handle, args=(client,))
             thread.start()
 

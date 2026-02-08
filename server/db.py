@@ -1,30 +1,37 @@
 import psycopg2
 import os
-from dotenv import load_dotenv
 import sqlite3
-
-load_dotenv()
 
 class DB:
     def __init__(self):
         try:
+            check = False
+            if os.path.exists(".env"):
+                check = True
+            from dotenv import load_dotenv; load_dotenv() if os.path.exists(".env") else None
             # if there is a proper env it uses PostgreSQL from .env
-            self.db = psycopg2.connect(
-                database=os.getenv("DATABASE"),
-                host=os.getenv("HOST"),
-                user=os.getenv("USER"),
-                password=os.getenv("PASSWORD"),
-                port=os.getenv("PORT")
-            )
-            self.db_type = "postgres"
+            if check:
+                self.db = psycopg2.connect(
+                    database=os.getenv("DATABASE"),
+                    host=os.getenv("HOST"),
+                    user=os.getenv("USER"),
+                    password=os.getenv("PASSWORD"),
+                    port=os.getenv("PORT"),
+                    connect_timeout=3
+                )
+                self.db_type = "postgres"
+            else:
+                # yes there is a second fallback i could not get it to work otherwise
+                self.db = sqlite3.connect(os.path.join(os.getcwd(), "wordle.db"), check_same_thread=False)
+                self.db_type = "sqlite"
         except Exception:
-            # but if its in development falls back to SQLite just for testing
-            
-            self.db = sqlite3.connect("wordle.db", check_same_thread=False)
+            # but if its in development falls back to SQLite just for testing 
+            self.db = sqlite3.connect(os.path.join(os.getcwd(), "wordle.db"), check_same_thread=False)
             self.db_type = "sqlite"
         
         self.create_table()
     
+    # creates table (works with both)
     def create_table(self):
         query = """CREATE TABLE IF NOT EXISTS wins (
             username VARCHAR(255) PRIMARY KEY,
@@ -34,6 +41,7 @@ class DB:
         cursor.execute(query)
         self.db.commit()
     
+    # increase wins (with sepearete queries for both)
     def increase_wins(self, username):
         try:
             cursor = self.db.cursor()
@@ -63,6 +71,7 @@ class DB:
             self.db.rollback()
             raise
     
+    # gets stats (seperate queries for both)
     def get_user_stats(self, username):
         try:
             cursor = self.db.cursor()
@@ -81,6 +90,7 @@ class DB:
             print(f"Error getting user stats: {error}")
             return {'wins': 0}
     
+    # gets leaderboard
     def get_leaderboard(self):
         """Get top players by number of wins"""
         query = """
@@ -102,9 +112,11 @@ class DB:
             print(f"Error fetching leaderboard: {error}")
             return []
     
+    # close
     def close(self):
         if self.db:
             self.db.close()
     
+    # delete
     def __del__(self):
         self.close()
